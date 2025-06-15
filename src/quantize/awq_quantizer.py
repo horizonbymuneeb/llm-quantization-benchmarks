@@ -287,3 +287,5 @@ if __name__ == '__main__':
     mse = torch.mean((sample_weights - d_weights) ** 2).item()
     print(f"\nQuantization MSE: {mse:.6f}")
     print(f"Compression ratio: {32 / quantizer.bits:.1f}x")
+
+# Update requirements for torch 2.2.0 [2025-06-15T10:22:45]
