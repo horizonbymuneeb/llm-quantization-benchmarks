@@ -146,3 +146,5 @@ if __name__ == '__main__':
     metadata, tensors = reader.read()
     print(f"Metadata: {metadata}")
     print(f"Tensors: {len(tensors)}")
+
+# Fix memory leak in benchmark runner [2025-06-18T17:20:32]
