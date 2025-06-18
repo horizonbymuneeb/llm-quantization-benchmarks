@@ -148,3 +148,5 @@ if __name__ == '__main__':
     print(f"Tensors: {len(tensors)}")
 
 # Fix memory leak in benchmark runner [2025-06-18T17:20:32]
+
+# Fix INT4 overflow in weight quantization [2025-06-18T11:59:07]
