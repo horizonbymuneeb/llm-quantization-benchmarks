@@ -5,3 +5,4 @@
 [2025-06-18T11:59:07] Fix INT4 overflow in weight quantization
 [2025-06-23T11:24:25] Profile memory bandwidth vs compute bottlenecks
 [2025-06-23T15:02:26] Fix race condition in parallel calibration
+[2025-06-23T10:13:28] Fix race condition in parallel calibration
