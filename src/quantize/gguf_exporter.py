@@ -150,3 +150,5 @@ if __name__ == '__main__':
 # Fix memory leak in benchmark runner [2025-06-18T17:20:32]
 
 # Fix INT4 overflow in weight quantization [2025-06-18T11:59:07]
+
+# Fix race condition in parallel calibration [2025-06-23T15:02:26]
