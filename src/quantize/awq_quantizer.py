@@ -293,3 +293,5 @@ if __name__ == '__main__':
 # Update benchmarking suite with new metrics [2025-06-16T18:55:34]
 
 # Update requirements for torch 2.2.0 [2025-06-17T18:37:00]
+
+# Profile memory bandwidth vs compute bottlenecks [2025-06-23T11:24:25]
