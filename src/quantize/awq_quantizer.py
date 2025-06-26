@@ -299,3 +299,5 @@ if __name__ == '__main__':
 # Fix race condition in parallel calibration [2025-06-23T10:13:28]
 
 # Optimize AWQ calibration loop for better accuracy [2025-06-24T13:08:35]
+
+# Fix INT4 overflow in weight quantization [2025-06-26T09:05:47]
