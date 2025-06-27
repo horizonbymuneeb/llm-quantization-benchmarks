@@ -301,3 +301,5 @@ if __name__ == '__main__':
 # Optimize AWQ calibration loop for better accuracy [2025-06-24T13:08:35]
 
 # Fix INT4 overflow in weight quantization [2025-06-26T09:05:47]
+
+# Update benchmarking suite with new metrics [2025-06-27T09:40:28]

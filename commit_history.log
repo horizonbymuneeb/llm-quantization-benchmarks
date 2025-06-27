@@ -9,3 +9,4 @@
 [2025-06-24T13:08:35] Optimize AWQ calibration loop for better accuracy
 [2025-06-26T20:27:15] Update requirements for torch 2.2.0
 [2025-06-26T09:05:47] Fix INT4 overflow in weight quantization
+[2025-06-27T09:40:28] Update benchmarking suite with new metrics
