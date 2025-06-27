@@ -154,3 +154,5 @@ if __name__ == '__main__':
 # Fix race condition in parallel calibration [2025-06-23T15:02:26]
 
 # Update requirements for torch 2.2.0 [2025-06-26T20:27:15]
+
+# Add support for custom quantization config [2025-06-27T14:23:41]
