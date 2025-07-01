@@ -12,3 +12,4 @@
 [2025-06-27T09:40:28] Update benchmarking suite with new metrics
 [2025-06-27T14:23:41] Add support for custom quantization config
 [2025-07-01T19:09:32] Vectorize dequantization kernel for speed
+[2025-07-01T13:54:17] Fix race condition in parallel calibration
