@@ -160,3 +160,5 @@ if __name__ == '__main__':
 # Vectorize dequantization kernel for speed [2025-07-01T19:09:32]
 
 # Fix race condition in parallel calibration [2025-07-01T13:54:17]
+
+# Update benchmarking suite with new metrics [2025-07-08T11:12:21]
