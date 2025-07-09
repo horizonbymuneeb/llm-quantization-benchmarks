@@ -17,3 +17,4 @@
 [2025-07-08T11:12:21] Update benchmarking suite with new metrics
 [2025-07-09T10:39:37] Validate models on Wikitext dataset
 [2025-07-09T16:12:24] Implement per-layer quantization sensitivity analysis
+[2025-07-09T10:20:31] Profile memory bandwidth vs compute bottlenecks

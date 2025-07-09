@@ -307,3 +307,5 @@ if __name__ == '__main__':
 # Fix INT4 overflow in weight quantization [2025-07-03T18:37:30]
 
 # Validate models on Wikitext dataset [2025-07-09T10:39:37]
+
+# Profile memory bandwidth vs compute bottlenecks [2025-07-09T10:20:31]
