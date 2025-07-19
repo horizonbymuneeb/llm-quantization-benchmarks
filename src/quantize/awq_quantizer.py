@@ -313,3 +313,5 @@ if __name__ == '__main__':
 # Implement per-layer quantization sensitivity analysis [2025-07-15T11:57:29]
 
 # Add support for 3-bit quantization [2025-07-15T19:07:31]
+
+# Add group-wise clipping for Outlier channels [2025-07-19T19:52:00]

@@ -20,3 +20,4 @@
 [2025-07-09T10:20:31] Profile memory bandwidth vs compute bottlenecks
 [2025-07-15T11:57:29] Implement per-layer quantization sensitivity analysis
 [2025-07-15T19:07:31] Add support for 3-bit quantization
+[2025-07-19T19:52:00] Add group-wise clipping for Outlier channels
