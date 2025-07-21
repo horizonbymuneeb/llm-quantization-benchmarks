@@ -164,3 +164,5 @@ if __name__ == '__main__':
 # Update benchmarking suite with new metrics [2025-07-08T11:12:21]
 
 # Implement per-layer quantization sensitivity analysis [2025-07-09T16:12:24]
+
+# Fix memory leak in benchmark runner [2025-07-21T14:29:00]

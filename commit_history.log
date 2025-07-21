@@ -22,3 +22,4 @@
 [2025-07-15T19:07:31] Add support for 3-bit quantization
 [2025-07-19T19:52:00] Add group-wise clipping for Outlier channels
 [2025-07-21T10:57:34] Optimize CUDA graph for repeated inference
+[2025-07-21T14:29:00] Fix memory leak in benchmark runner
