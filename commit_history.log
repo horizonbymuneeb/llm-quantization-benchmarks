@@ -25,3 +25,4 @@
 [2025-07-21T14:29:00] Fix memory leak in benchmark runner
 [2025-07-22T20:59:33] Fix memory leak in benchmark runner
 [2025-07-22T17:57:49] Optimize CUDA graph for repeated inference
+[2025-07-30T16:42:45] Update README with benchmarking results
