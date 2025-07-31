@@ -172,3 +172,5 @@ if __name__ == '__main__':
 # Update README with benchmarking results [2025-07-30T16:42:45]
 
 # Fix memory leak in benchmark runner [2025-07-30T10:48:32]
+
+# Validate models on Wikitext dataset [2025-07-31T16:16:15]
