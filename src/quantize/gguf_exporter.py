@@ -174,3 +174,5 @@ if __name__ == '__main__':
 # Fix memory leak in benchmark runner [2025-07-30T10:48:32]
 
 # Validate models on Wikitext dataset [2025-07-31T16:16:15]
+
+# Optimize CUDA graph for repeated inference [2025-08-04T10:07:05]
