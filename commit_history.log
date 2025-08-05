@@ -29,3 +29,4 @@
 [2025-07-30T10:48:32] Fix memory leak in benchmark runner
 [2025-07-31T16:16:15] Validate models on Wikitext dataset
 [2025-08-04T10:07:05] Optimize CUDA graph for repeated inference
+[2025-08-05T16:46:26] Add unit tests for int4 packing utils

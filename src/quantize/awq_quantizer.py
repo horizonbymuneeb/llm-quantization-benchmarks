@@ -319,3 +319,5 @@ if __name__ == '__main__':
 # Optimize CUDA graph for repeated inference [2025-07-21T10:57:34]
 
 # Optimize CUDA graph for repeated inference [2025-07-22T17:57:49]
+
+# Add unit tests for int4 packing utils [2025-08-05T16:46:26]
