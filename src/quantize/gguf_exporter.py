@@ -178,3 +178,5 @@ if __name__ == '__main__':
 # Optimize CUDA graph for repeated inference [2025-08-04T10:07:05]
 
 # Implement dynamic bit-width selection [2025-08-05T10:39:46]
+
+# Profile memory bandwidth vs compute bottlenecks [2025-08-07T19:07:48]
