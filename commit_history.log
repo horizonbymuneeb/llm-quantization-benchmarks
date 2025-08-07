@@ -32,3 +32,4 @@
 [2025-08-05T16:46:26] Add unit tests for int4 packing utils
 [2025-08-05T10:39:46] Implement dynamic bit-width selection
 [2025-08-07T19:07:48] Profile memory bandwidth vs compute bottlenecks
+[2025-08-07T18:49:44] Implement dynamic bit-width selection
