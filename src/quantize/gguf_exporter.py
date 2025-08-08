@@ -182,3 +182,5 @@ if __name__ == '__main__':
 # Profile memory bandwidth vs compute bottlenecks [2025-08-07T19:07:48]
 
 # Implement dynamic bit-width selection [2025-08-07T18:49:44]
+
+# Vectorize dequantization kernel for speed [2025-08-08T17:41:56]
