@@ -321,3 +321,5 @@ if __name__ == '__main__':
 # Optimize CUDA graph for repeated inference [2025-07-22T17:57:49]
 
 # Add unit tests for int4 packing utils [2025-08-05T16:46:26]
+
+# Optimize AWQ calibration loop for better accuracy [2025-08-08T20:59:33]
