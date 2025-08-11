@@ -184,3 +184,5 @@ if __name__ == '__main__':
 # Implement dynamic bit-width selection [2025-08-07T18:49:44]
 
 # Vectorize dequantization kernel for speed [2025-08-08T17:41:56]
+
+# Fix INT4 overflow in weight quantization [2025-08-11T19:32:44]
