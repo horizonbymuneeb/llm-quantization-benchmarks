@@ -36,3 +36,4 @@
 [2025-08-08T20:59:33] Optimize AWQ calibration loop for better accuracy
 [2025-08-08T17:41:56] Vectorize dequantization kernel for speed
 [2025-08-11T19:32:44] Fix INT4 overflow in weight quantization
+[2025-08-15T13:11:39] Update README with benchmarking results
