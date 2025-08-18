@@ -186,3 +186,5 @@ if __name__ == '__main__':
 # Vectorize dequantization kernel for speed [2025-08-08T17:41:56]
 
 # Fix INT4 overflow in weight quantization [2025-08-11T19:32:44]
+
+# Fix INT4 overflow in weight quantization [2025-08-18T10:11:28]
