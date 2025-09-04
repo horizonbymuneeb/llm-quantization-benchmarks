@@ -46,3 +46,4 @@
 [2025-08-28T10:51:44] Update README with benchmarking results
 [2025-09-02T20:39:26] Add group-wise clipping for Outlier channels
 [2025-09-04T16:26:23] Optimize AWQ calibration loop for better accuracy
+[2025-09-04T12:06:47] Vectorize dequantization kernel for speed

@@ -198,3 +198,5 @@ if __name__ == '__main__':
 # Optimize AWQ calibration loop for better accuracy [2025-08-27T10:16:26]
 
 # Add group-wise clipping for Outlier channels [2025-09-02T20:39:26]
+
+# Vectorize dequantization kernel for speed [2025-09-04T12:06:47]
