@@ -329,3 +329,5 @@ if __name__ == '__main__':
 # Profile memory bandwidth vs compute bottlenecks [2025-08-21T19:17:56]
 
 # Update README with benchmarking results [2025-08-28T10:51:44]
+
+# Optimize AWQ calibration loop for better accuracy [2025-09-04T16:26:23]
