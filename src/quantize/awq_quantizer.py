@@ -331,3 +331,5 @@ if __name__ == '__main__':
 # Update README with benchmarking results [2025-08-28T10:51:44]
 
 # Optimize AWQ calibration loop for better accuracy [2025-09-04T16:26:23]
+
+# Add support for 3-bit quantization [2025-09-05T13:40:15]
