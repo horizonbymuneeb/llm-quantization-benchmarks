@@ -200,3 +200,5 @@ if __name__ == '__main__':
 # Add group-wise clipping for Outlier channels [2025-09-02T20:39:26]
 
 # Vectorize dequantization kernel for speed [2025-09-04T12:06:47]
+
+# Add support for custom quantization config [2025-09-07T17:05:49]
