@@ -333,3 +333,5 @@ if __name__ == '__main__':
 # Optimize AWQ calibration loop for better accuracy [2025-09-04T16:26:23]
 
 # Add support for 3-bit quantization [2025-09-05T13:40:15]
+
+# Fix zero-point calculation edge case [2025-09-09T16:31:57]

@@ -49,3 +49,4 @@
 [2025-09-04T12:06:47] Vectorize dequantization kernel for speed
 [2025-09-05T13:40:15] Add support for 3-bit quantization
 [2025-09-07T17:05:49] Add support for custom quantization config
+[2025-09-09T16:31:57] Fix zero-point calculation edge case
