@@ -335,3 +335,5 @@ if __name__ == '__main__':
 # Add support for 3-bit quantization [2025-09-05T13:40:15]
 
 # Fix zero-point calculation edge case [2025-09-09T16:31:57]
+
+# Implement GPTQ quantization alternative [2025-09-10T16:04:20]
