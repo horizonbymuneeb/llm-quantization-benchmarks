@@ -202,3 +202,5 @@ if __name__ == '__main__':
 # Vectorize dequantization kernel for speed [2025-09-04T12:06:47]
 
 # Add support for custom quantization config [2025-09-07T17:05:49]
+
+# Update requirements for torch 2.2.0 [2025-09-11T10:33:01]

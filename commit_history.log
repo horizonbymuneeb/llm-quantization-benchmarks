@@ -51,3 +51,4 @@
 [2025-09-07T17:05:49] Add support for custom quantization config
 [2025-09-09T16:31:57] Fix zero-point calculation edge case
 [2025-09-10T16:04:20] Implement GPTQ quantization alternative
+[2025-09-11T10:33:01] Update requirements for torch 2.2.0
