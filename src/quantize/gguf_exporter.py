@@ -204,3 +204,5 @@ if __name__ == '__main__':
 # Add support for custom quantization config [2025-09-07T17:05:49]
 
 # Update requirements for torch 2.2.0 [2025-09-11T10:33:01]
+
+# Add support for 3-bit quantization [2025-09-14T14:14:24]
