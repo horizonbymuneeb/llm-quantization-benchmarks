@@ -206,3 +206,5 @@ if __name__ == '__main__':
 # Update requirements for torch 2.2.0 [2025-09-11T10:33:01]
 
 # Add support for 3-bit quantization [2025-09-14T14:14:24]
+
+# Add unit tests for int4 packing utils [2025-09-17T13:32:00]
