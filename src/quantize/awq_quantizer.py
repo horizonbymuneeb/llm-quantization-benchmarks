@@ -337,3 +337,5 @@ if __name__ == '__main__':
 # Fix zero-point calculation edge case [2025-09-09T16:31:57]
 
 # Implement GPTQ quantization alternative [2025-09-10T16:04:20]
+
+# Add group-wise clipping for Outlier channels [2025-09-23T11:33:12]
