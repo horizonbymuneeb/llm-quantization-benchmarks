@@ -55,3 +55,4 @@
 [2025-09-14T14:14:24] Add support for 3-bit quantization
 [2025-09-17T13:32:00] Add unit tests for int4 packing utils
 [2025-09-17T15:34:42] Add support for 3-bit quantization
+[2025-09-23T09:09:29] Fix race condition in parallel calibration

@@ -210,3 +210,5 @@ if __name__ == '__main__':
 # Add unit tests for int4 packing utils [2025-09-17T13:32:00]
 
 # Add support for 3-bit quantization [2025-09-17T15:34:42]
+
+# Fix race condition in parallel calibration [2025-09-23T09:09:29]
