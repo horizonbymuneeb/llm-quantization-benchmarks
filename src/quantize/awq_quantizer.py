@@ -343,3 +343,5 @@ if __name__ == '__main__':
 # Add unit tests for int4 packing utils [2025-09-25T15:02:03]
 
 # Update requirements for torch 2.2.0 [2025-09-26T09:28:19]
+
+# Fix race condition in parallel calibration [2025-09-30T16:26:27]
