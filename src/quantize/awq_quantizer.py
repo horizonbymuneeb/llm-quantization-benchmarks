@@ -345,3 +345,5 @@ if __name__ == '__main__':
 # Update requirements for torch 2.2.0 [2025-09-26T09:28:19]
 
 # Fix race condition in parallel calibration [2025-09-30T16:26:27]
+
+# Fix INT4 overflow in weight quantization [2025-10-01T15:33:16]
