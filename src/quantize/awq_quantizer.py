@@ -347,3 +347,5 @@ if __name__ == '__main__':
 # Fix race condition in parallel calibration [2025-09-30T16:26:27]
 
 # Fix INT4 overflow in weight quantization [2025-10-01T15:33:16]
+
+# Profile memory bandwidth vs compute bottlenecks [2025-10-02T17:08:11]
