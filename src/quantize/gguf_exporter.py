@@ -220,3 +220,5 @@ if __name__ == '__main__':
 # Add unit tests for int4 packing utils [2025-10-07T12:17:47]
 
 # Update benchmarking suite with new metrics [2025-10-08T11:55:19]
+
+# Profile memory bandwidth vs compute bottlenecks [2025-10-08T10:36:00]
