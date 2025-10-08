@@ -218,3 +218,5 @@ if __name__ == '__main__':
 # Add support for 3-bit quantization [2025-10-02T11:31:44]
 
 # Add unit tests for int4 packing utils [2025-10-07T12:17:47]
+
+# Update benchmarking suite with new metrics [2025-10-08T11:55:19]
