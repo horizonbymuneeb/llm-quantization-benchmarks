@@ -349,3 +349,5 @@ if __name__ == '__main__':
 # Fix INT4 overflow in weight quantization [2025-10-01T15:33:16]
 
 # Profile memory bandwidth vs compute bottlenecks [2025-10-02T17:08:11]
+
+# Fix zero-point calculation edge case [2025-10-10T12:39:08]
