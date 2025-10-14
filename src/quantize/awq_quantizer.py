@@ -351,3 +351,5 @@ if __name__ == '__main__':
 # Profile memory bandwidth vs compute bottlenecks [2025-10-02T17:08:11]
 
 # Fix zero-point calculation edge case [2025-10-10T12:39:08]
+
+# Fix memory leak in benchmark runner [2025-10-14T11:06:15]
