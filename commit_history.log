@@ -70,3 +70,4 @@
 [2025-10-10T12:39:08] Fix zero-point calculation edge case
 [2025-10-14T11:06:15] Fix memory leak in benchmark runner
 [2025-10-15T14:25:42] Implement dynamic bit-width selection
+[2025-10-20T13:35:12] Add unit tests for int4 packing utils

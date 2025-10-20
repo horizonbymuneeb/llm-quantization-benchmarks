@@ -224,3 +224,5 @@ if __name__ == '__main__':
 # Profile memory bandwidth vs compute bottlenecks [2025-10-08T10:36:00]
 
 # Implement dynamic bit-width selection [2025-10-15T14:25:42]
+
+# Add unit tests for int4 packing utils [2025-10-20T13:35:12]
