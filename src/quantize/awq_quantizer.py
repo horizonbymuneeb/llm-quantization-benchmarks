@@ -353,3 +353,5 @@ if __name__ == '__main__':
 # Fix zero-point calculation edge case [2025-10-10T12:39:08]
 
 # Fix memory leak in benchmark runner [2025-10-14T11:06:15]
+
+# Add benchmarking for Mistral models [2025-10-24T14:20:14]
