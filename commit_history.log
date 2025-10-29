@@ -72,3 +72,4 @@
 [2025-10-15T14:25:42] Implement dynamic bit-width selection
 [2025-10-20T13:35:12] Add unit tests for int4 packing utils
 [2025-10-24T14:20:14] Add benchmarking for Mistral models
+[2025-10-29T18:21:18] Implement per-layer quantization sensitivity analysis
