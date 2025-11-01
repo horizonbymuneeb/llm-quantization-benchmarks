@@ -228,3 +228,5 @@ if __name__ == '__main__':
 # Add unit tests for int4 packing utils [2025-10-20T13:35:12]
 
 # Implement per-layer quantization sensitivity analysis [2025-10-29T18:21:18]
+
+# Profile memory bandwidth vs compute bottlenecks [2025-11-01T11:14:11]
