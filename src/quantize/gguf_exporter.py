@@ -230,3 +230,5 @@ if __name__ == '__main__':
 # Implement per-layer quantization sensitivity analysis [2025-10-29T18:21:18]
 
 # Profile memory bandwidth vs compute bottlenecks [2025-11-01T11:14:11]
+
+# Update benchmarking suite with new metrics [2025-11-07T10:44:58]
