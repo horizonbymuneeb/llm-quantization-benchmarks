@@ -355,3 +355,5 @@ if __name__ == '__main__':
 # Fix memory leak in benchmark runner [2025-10-14T11:06:15]
 
 # Add benchmarking for Mistral models [2025-10-24T14:20:14]
+
+# Implement GPTQ quantization alternative [2025-11-11T11:23:18]

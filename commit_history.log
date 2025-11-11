@@ -76,3 +76,4 @@
 [2025-11-01T11:14:11] Profile memory bandwidth vs compute bottlenecks
 [2025-11-07T10:44:58] Update benchmarking suite with new metrics
 [2025-11-10T20:10:28] Fix INT4 overflow in weight quantization
+[2025-11-11T11:23:18] Implement GPTQ quantization alternative
