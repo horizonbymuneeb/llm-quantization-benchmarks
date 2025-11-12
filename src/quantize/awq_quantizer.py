@@ -357,3 +357,5 @@ if __name__ == '__main__':
 # Add benchmarking for Mistral models [2025-10-24T14:20:14]
 
 # Implement GPTQ quantization alternative [2025-11-11T11:23:18]
+
+# Optimize CUDA graph for repeated inference [2025-11-12T11:46:11]

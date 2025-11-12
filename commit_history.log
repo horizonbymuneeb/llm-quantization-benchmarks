@@ -77,3 +77,4 @@
 [2025-11-07T10:44:58] Update benchmarking suite with new metrics
 [2025-11-10T20:10:28] Fix INT4 overflow in weight quantization
 [2025-11-11T11:23:18] Implement GPTQ quantization alternative
+[2025-11-12T11:46:11] Optimize CUDA graph for repeated inference
