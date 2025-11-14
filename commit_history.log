@@ -78,3 +78,4 @@
 [2025-11-10T20:10:28] Fix INT4 overflow in weight quantization
 [2025-11-11T11:23:18] Implement GPTQ quantization alternative
 [2025-11-12T11:46:11] Optimize CUDA graph for repeated inference
+[2025-11-14T14:32:28] Profile memory bandwidth vs compute bottlenecks
