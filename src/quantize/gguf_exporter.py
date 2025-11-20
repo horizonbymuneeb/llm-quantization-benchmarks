@@ -238,3 +238,5 @@ if __name__ == '__main__':
 # Profile memory bandwidth vs compute bottlenecks [2025-11-14T14:32:28]
 
 # Add unit tests for int4 packing utils [2025-11-18T09:04:07]
+
+# Optimize AWQ calibration loop for better accuracy [2025-11-20T20:27:54]
