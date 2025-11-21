@@ -361,3 +361,5 @@ if __name__ == '__main__':
 # Optimize CUDA graph for repeated inference [2025-11-12T11:46:11]
 
 # Add support for 3-bit quantization [2025-11-15T12:42:22]
+
+# Update requirements for torch 2.2.0 [2025-11-21T20:48:59]
