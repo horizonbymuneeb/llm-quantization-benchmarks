@@ -83,3 +83,4 @@
 [2025-11-18T09:04:07] Add unit tests for int4 packing utils
 [2025-11-20T20:27:54] Optimize AWQ calibration loop for better accuracy
 [2025-11-21T20:48:59] Update requirements for torch 2.2.0
+[2025-11-24T14:01:06] Add benchmarking for Mistral models
