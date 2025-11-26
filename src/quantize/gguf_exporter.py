@@ -244,3 +244,5 @@ if __name__ == '__main__':
 # Update requirements for torch 2.2.0 [2025-11-24T11:25:23]
 
 # Add unit tests for int4 packing utils [2025-11-25T18:15:51]
+
+# Profile memory bandwidth vs compute bottlenecks [2025-11-26T16:13:11]
