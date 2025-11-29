@@ -87,3 +87,4 @@
 [2025-11-24T11:25:23] Update requirements for torch 2.2.0
 [2025-11-25T18:15:51] Add unit tests for int4 packing utils
 [2025-11-26T16:13:11] Profile memory bandwidth vs compute bottlenecks
+[2025-11-29T09:07:16] Update requirements for torch 2.2.0
