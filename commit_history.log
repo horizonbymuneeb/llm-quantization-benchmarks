@@ -89,3 +89,4 @@
 [2025-11-26T16:13:11] Profile memory bandwidth vs compute bottlenecks
 [2025-11-29T09:07:16] Update requirements for torch 2.2.0
 [2025-11-30T15:11:39] Fix INT4 overflow in weight quantization
+[2025-11-30T13:22:13] Vectorize dequantization kernel for speed

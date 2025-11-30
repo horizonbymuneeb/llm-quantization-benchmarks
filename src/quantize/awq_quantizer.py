@@ -367,3 +367,5 @@ if __name__ == '__main__':
 # Add benchmarking for Mistral models [2025-11-24T14:01:06]
 
 # Update requirements for torch 2.2.0 [2025-11-29T09:07:16]
+
+# Vectorize dequantization kernel for speed [2025-11-30T13:22:13]
