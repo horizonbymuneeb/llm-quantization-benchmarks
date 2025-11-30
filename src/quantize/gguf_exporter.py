@@ -246,3 +246,5 @@ if __name__ == '__main__':
 # Add unit tests for int4 packing utils [2025-11-25T18:15:51]
 
 # Profile memory bandwidth vs compute bottlenecks [2025-11-26T16:13:11]
+
+# Fix INT4 overflow in weight quantization [2025-11-30T15:11:39]
