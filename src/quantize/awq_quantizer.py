@@ -369,3 +369,5 @@ if __name__ == '__main__':
 # Update requirements for torch 2.2.0 [2025-11-29T09:07:16]
 
 # Vectorize dequantization kernel for speed [2025-11-30T13:22:13]
+
+# Add support for 3-bit quantization [2025-12-01T18:22:22]
