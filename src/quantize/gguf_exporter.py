@@ -248,3 +248,5 @@ if __name__ == '__main__':
 # Profile memory bandwidth vs compute bottlenecks [2025-11-26T16:13:11]
 
 # Fix INT4 overflow in weight quantization [2025-11-30T15:11:39]
+
+# Update README with benchmarking results [2025-12-04T18:22:09]
