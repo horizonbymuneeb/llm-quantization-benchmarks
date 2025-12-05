@@ -93,3 +93,4 @@
 [2025-12-01T18:22:22] Add support for 3-bit quantization
 [2025-12-04T18:22:09] Update README with benchmarking results
 [2025-12-04T15:13:42] Implement per-layer quantization sensitivity analysis
+[2025-12-05T12:09:22] Fix zero-point calculation edge case
