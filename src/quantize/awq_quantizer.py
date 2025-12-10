@@ -375,3 +375,5 @@ if __name__ == '__main__':
 # Implement per-layer quantization sensitivity analysis [2025-12-04T15:13:42]
 
 # Validate models on Wikitext dataset [2025-12-07T19:23:13]
+
+# Add group-wise clipping for Outlier channels [2025-12-10T13:19:05]
