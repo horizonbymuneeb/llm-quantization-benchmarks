@@ -252,3 +252,5 @@ if __name__ == '__main__':
 # Update README with benchmarking results [2025-12-04T18:22:09]
 
 # Fix zero-point calculation edge case [2025-12-05T12:09:22]
+
+# Add unit tests for int4 packing utils [2025-12-11T10:56:50]
