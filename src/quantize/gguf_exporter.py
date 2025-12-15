@@ -258,3 +258,5 @@ if __name__ == '__main__':
 # Implement per-layer quantization sensitivity analysis [2025-12-14T12:52:44]
 
 # Profile memory bandwidth vs compute bottlenecks [2025-12-14T12:26:23]
+
+# Validate models on Wikitext dataset [2025-12-15T14:02:58]
