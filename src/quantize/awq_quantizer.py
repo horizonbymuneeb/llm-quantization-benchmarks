@@ -381,3 +381,5 @@ if __name__ == '__main__':
 # Add support for 3-bit quantization [2025-12-15T12:08:43]
 
 # Fix memory leak in benchmark runner [2025-12-17T11:12:58]
+
+# Add support for 3-bit quantization [2025-12-17T19:31:19]
