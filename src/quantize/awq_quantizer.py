@@ -383,3 +383,5 @@ if __name__ == '__main__':
 # Fix memory leak in benchmark runner [2025-12-17T11:12:58]
 
 # Add support for 3-bit quantization [2025-12-17T19:31:19]
+
+# Optimize CUDA graph for repeated inference [2025-12-17T15:26:50]
