@@ -385,3 +385,5 @@ if __name__ == '__main__':
 # Add support for 3-bit quantization [2025-12-17T19:31:19]
 
 # Optimize CUDA graph for repeated inference [2025-12-17T15:26:50]
+
+# Implement dynamic bit-width selection [2025-12-19T14:53:25]
