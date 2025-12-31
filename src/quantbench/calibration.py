@@ -26,3 +26,47 @@ from dataclasses import dataclass
 import numpy as np
 
 from .dtypes import NumericFormat
+
+MIN_BINS = 16
+ENTROPY_SEARCH_STEPS = 96
+
+
+@dataclass(frozen=True)
+class CalibrationResult:
+    """The chosen clip range plus the diagnostics that justify it."""
+
+    lower: float
+    upper: float
+    method: str
+    metric: float
+    n_observations: int
+
+    @property
+    def scale(self) -> float:
+        """Half-range, i.e. the symmetric scale this range implies."""
+        return (self.upper - self.lower) / 2.0
+
+    @property
+    def midpoint(self) -> float:
+        """Centre of the calibrated range.
+
+        This is the float value that maps onto the middle code of an unsigned
+        grid.  The integer zero point is derived from it and the scale by the
+        quantiser, not here, because that derivation depends on the target
+        format's code count.
+        """
+        return (self.lower + self.upper) / 2.0
+
+    def clip(self, values: np.ndarray) -> np.ndarray:
+        """Clip an array into the calibrated range."""
+        return np.clip(np.asarray(values, dtype=np.float32), self.lower, self.upper)
+
+    def as_dict(self) -> dict[str, float | str | int]:
+        """JSON-friendly view, embedded in the report."""
+        return {
+            "lower": float(self.lower),
+            "upper": float(self.upper),
+            "method": self.method,
+            "metric": float(self.metric),
+            "n_observations": int(self.n_observations),
+        }
