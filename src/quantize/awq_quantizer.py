@@ -389,3 +389,5 @@ if __name__ == '__main__':
 # Implement dynamic bit-width selection [2025-12-19T14:53:25]
 
 # Fix race condition in parallel calibration [2025-12-31T11:12:43]
+
+# Profile memory bandwidth vs compute bottlenecks [2026-01-04T15:55:07]
