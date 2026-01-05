@@ -70,3 +70,59 @@ class CalibrationResult:
             "metric": float(self.metric),
             "n_observations": int(self.n_observations),
         }
+
+
+def flatten_observations(values: np.ndarray | list[np.ndarray]) -> np.ndarray:
+    """Flatten one array or a batch of arrays into a single 1-D float32 vector."""
+    if isinstance(values, (list, tuple)):
+        if not values:
+            raise ValueError("cannot calibrate on an empty list of arrays")
+        parts = [np.asarray(v, dtype=np.float32).ravel() for v in values]
+        return np.concatenate(parts)
+    arr = np.asarray(values, dtype=np.float32).ravel()
+    if arr.size == 0:
+        raise ValueError("cannot calibrate on an empty array")
+    return arr
+
+
+def minmax_range(observations: np.ndarray) -> CalibrationResult:
+    """Use the full observed extent; no clipping at all."""
+    obs = flatten_observations(observations)
+    lo = float(obs.min())
+    hi = float(obs.max())
+    if lo == hi:
+        # A constant activation still needs a non-degenerate scale.
+        pad = abs(lo) * 0.05 if lo != 0.0 else 0.5
+        lo, hi = lo - pad, hi + pad
+    return CalibrationResult(lo, hi, "minmax", float(np.abs(obs).max()), int(obs.size))
+
+
+def percentile_range(observations: np.ndarray, percentile: float = 99.9) -> CalibrationResult:
+    """Clip the symmetric tail so ``percentile`` percent of mass is retained."""
+    if not 50.0 <= percentile < 100.0:
+        raise ValueError(f"percentile must lie in [50, 100), got {percentile!r}")
+    obs = flatten_observations(observations)
+    tail = (100.0 - percentile) / 2.0
+    lo = float(np.percentile(obs, tail))
+    hi = float(np.percentile(obs, 100.0 - tail))
+    if lo == hi:
+        pad = abs(lo) * 0.05 if lo != 0.0 else 0.5
+        lo, hi = lo - pad, hi + pad
+    # Report the fraction of samples actually retained, so a caller can see
+    # how aggressive the clip was instead of trusting the parameter name.
+    inside = float(np.mean((obs >= lo) & (obs <= hi)))
+    return CalibrationResult(lo, hi, "percentile", inside, int(obs.size))
+
+
+def _padded_extent(obs: np.ndarray) -> tuple[float, float]:
+    """Observed extent, widened when every observation is identical.
+
+    A calibration range of zero width would make every downstream scale zero,
+    so a degenerate input is padded the same way :func:`minmax_range` pads it.
+    """
+    lo = float(obs.min())
+    hi = float(obs.max())
+    if lo == hi:
+        pad = abs(lo) * 0.05 if lo != 0.0 else 0.5
+        return lo - pad, hi + pad
+    return lo, hi
