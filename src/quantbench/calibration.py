@@ -126,3 +126,29 @@ def _padded_extent(obs: np.ndarray) -> tuple[float, float]:
         pad = abs(lo) * 0.05 if lo != 0.0 else 0.5
         return lo - pad, hi + pad
     return lo, hi
+
+
+def build_histogram(observations: np.ndarray, n_bins: int) -> tuple[np.ndarray, np.ndarray]:
+    """Histogram the absolute values, which is what the clip search needs.
+
+    Quantisation error depends on the magnitude of a value, not its sign, so the
+    search runs on ``|x|`` and the resulting threshold is mirrored at the end.
+    """
+    if n_bins < MIN_BINS:
+        raise ValueError(f"n_bins must be at least {MIN_BINS}, got {n_bins}")
+    obs = flatten_observations(observations)
+    absvals = np.abs(obs)
+    hi = float(absvals.max())
+    if hi <= 0.0:
+        return np.array([float(absvals.size)]), np.array([0.0, 0.0])
+    hist, edges = np.histogram(absvals, bins=n_bins, range=(0.0, hi))
+    return hist.astype(np.float64), edges.astype(np.float64)
+
+
+def _normalised_entropy(counts: np.ndarray) -> float:
+    """Shannon entropy of a count vector, in bits, zero-safe."""
+    total = float(counts.sum())
+    if total <= 0.0:
+        return 0.0
+    probs = counts[counts > 0] / total
+    return float(-np.sum(probs * np.log2(probs)))
