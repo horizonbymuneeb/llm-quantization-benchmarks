@@ -152,3 +152,44 @@ def _normalised_entropy(counts: np.ndarray) -> float:
         return 0.0
     probs = counts[counts > 0] / total
     return float(-np.sum(probs * np.log2(probs)))
+
+
+def _level_assignment(n_bins: int, n_levels: int) -> np.ndarray:
+    """Map each histogram bin onto one of ``n_levels`` codes, no clipping."""
+    if n_bins < 1 or n_levels < 1:
+        raise ValueError("n_bins and n_levels must be positive")
+    return np.minimum((np.arange(n_bins) * n_levels) // n_bins, n_levels - 1)
+
+
+def _saturating_assignment(n_bins: int, n_levels: int, cut: int) -> np.ndarray:
+    """Map bins onto codes as a real kernel does when clipped at bin ``cut``.
+
+    The retained range ``[0, cut)`` is divided into ``n_levels`` equal steps, so
+    a small ``cut`` gives *finer* resolution inside the dense region.  Every bin
+    at or beyond ``cut`` saturates onto the last code.  This is the detail that
+    makes the entropy search non-degenerate: without the saturation term, a tiny
+    threshold would look lossless because the surviving bins would each get
+    their own code, and the search would always clip as hard as allowed.
+    """
+    if n_levels < 1:
+        raise ValueError("n_levels must be positive")
+    if cut < 1:
+        raise ValueError("cut must be positive")
+    codes = (np.arange(n_bins) * n_levels) // max(cut, 1)
+    return np.minimum(codes, n_levels - 1)
+
+
+def _expand_codes(hist: np.ndarray, assignment: np.ndarray, n_levels: int) -> np.ndarray:
+    """Spread each code's mass uniformly over the bins that map onto it.
+
+    The quantised model cannot tell bins inside one code apart, so its best
+    estimate for each of them is the code's mean probability.  Comparing that
+    estimate against the reference on the *same* support is what makes the KL
+    divergence meaningful.
+    """
+    hist = np.asarray(hist, dtype=np.float64)
+    code_mass = np.zeros(n_levels, dtype=np.float64)
+    np.add.at(code_mass, assignment, hist)
+    counts = np.bincount(assignment, minlength=n_levels).astype(np.float64)
+    per_bin = np.divide(code_mass, counts, out=np.zeros_like(code_mass), where=counts > 0)
+    return per_bin[assignment]
