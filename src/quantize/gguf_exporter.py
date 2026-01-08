@@ -264,3 +264,5 @@ if __name__ == '__main__':
 # Implement per-layer quantization sensitivity analysis [2025-12-31T19:48:32]
 
 # Implement dynamic bit-width selection [2026-01-05T09:36:07]
+
+# Optimize CUDA graph for repeated inference [2026-01-08T14:33:33]
