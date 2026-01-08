@@ -391,3 +391,5 @@ if __name__ == '__main__':
 # Fix race condition in parallel calibration [2025-12-31T11:12:43]
 
 # Profile memory bandwidth vs compute bottlenecks [2026-01-04T15:55:07]
+
+# Vectorize dequantization kernel for speed [2026-01-08T11:14:36]

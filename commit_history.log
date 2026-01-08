@@ -109,3 +109,4 @@
 [2025-12-31T19:48:32] Implement per-layer quantization sensitivity analysis
 [2026-01-04T15:55:07] Profile memory bandwidth vs compute bottlenecks
 [2026-01-05T09:36:07] Implement dynamic bit-width selection
+[2026-01-08T11:14:36] Vectorize dequantization kernel for speed
