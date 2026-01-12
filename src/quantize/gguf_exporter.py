@@ -266,3 +266,5 @@ if __name__ == '__main__':
 # Implement dynamic bit-width selection [2026-01-05T09:36:07]
 
 # Optimize CUDA graph for repeated inference [2026-01-08T14:33:33]
+
+# Fix INT4 overflow in weight quantization [2026-01-12T19:50:33]
