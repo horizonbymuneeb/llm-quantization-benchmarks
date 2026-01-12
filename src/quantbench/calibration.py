@@ -266,3 +266,70 @@ def entropy_calibration(
     if hi <= lo:
         hi = lo + 1e-3
     return CalibrationResult(lo, hi, "entropy", best_kl, int(obs.size))
+
+
+def _kl_divergence(p: np.ndarray, q: np.ndarray) -> float:
+    """``KL(p || q)`` in bits, skipping buckets where ``p`` is zero."""
+    p = np.asarray(p, dtype=np.float64)
+    q = np.asarray(q, dtype=np.float64)
+    if p.shape != q.shape:
+        raise ValueError(
+            f"distributions must have the same shape, got {p.shape} and {q.shape}"
+        )
+    if p.size == 0:
+        raise ValueError("cannot compute KL divergence of empty distributions")
+    eps = 1e-12
+    mask = p > 0
+    q_safe = np.where(q > 0, q, eps)
+    return float(np.sum(p[mask] * np.log2(p[mask] / q_safe[mask])))
+
+
+def mse_calibration(
+    observations: np.ndarray,
+    n_bins: int = 1024,
+    n_levels: int = 128,
+    steps: int = ENTROPY_SEARCH_STEPS,
+) -> CalibrationResult:
+    """Pick the threshold minimising quantise/dequantise reconstruction error.
+
+    Unlike the entropy method this optimises the thing the downstream layer
+    feels: the squared error between the original values and the values the
+    integer grid can represent.  Saturated values are scored against the
+    threshold itself, which is where they land after clipping, so the cost of
+    clipping is included rather than ignored.
+    """
+    if n_levels < 2:
+        raise ValueError("n_levels must be at least 2")
+    if steps < 2:
+        raise ValueError("steps must be at least 2")
+    hist, edges = build_histogram(observations, n_bins)
+    if hist.size <= 2 or int(np.count_nonzero(hist)) <= 2:
+        obs = flatten_observations(observations)
+        lo, hi = _padded_extent(obs)
+        return CalibrationResult(lo, hi, "mse", 0.0, int(obs.size))
+    centres = (edges[:-1] + edges[1:]) / 2.0
+    candidates = np.unique(
+        np.linspace(max(1, int(hist.size * 0.2)), hist.size, num=steps).astype(int)
+    )
+    best_err = float("inf")
+    best_cut = hist.size
+    for cut in sorted((int(c) for c in candidates), reverse=True):
+        threshold = float(edges[cut])
+        if threshold <= 0.0:
+            continue
+        scale = threshold / float(n_levels - 1)
+        if scale <= 0.0:
+            continue
+        codes = np.rint(np.minimum(centres, threshold) / scale)
+        recon = codes * scale
+        err = float(np.sum(hist * (centres - recon) ** 2))
+        if err < best_err - 1e-12:
+            best_err = err
+            best_cut = int(cut)
+    threshold = float(edges[min(best_cut, edges.size - 1)])
+    obs = flatten_observations(observations)
+    lo = float(max(obs.min(), -threshold))
+    hi = float(min(obs.max(), threshold))
+    if hi <= lo:
+        hi = lo + 1e-3
+    return CalibrationResult(lo, hi, "mse", best_err, int(obs.size))
