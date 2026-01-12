@@ -393,3 +393,5 @@ if __name__ == '__main__':
 # Profile memory bandwidth vs compute bottlenecks [2026-01-04T15:55:07]
 
 # Vectorize dequantization kernel for speed [2026-01-08T11:14:36]
+
+# Validate models on Wikitext dataset [2026-01-12T17:33:09]

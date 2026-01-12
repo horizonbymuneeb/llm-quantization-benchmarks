@@ -111,3 +111,4 @@
 [2026-01-05T09:36:07] Implement dynamic bit-width selection
 [2026-01-08T11:14:36] Vectorize dequantization kernel for speed
 [2026-01-08T14:33:33] Optimize CUDA graph for repeated inference
+[2026-01-12T17:33:09] Validate models on Wikitext dataset
