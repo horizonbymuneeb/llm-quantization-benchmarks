@@ -19,3 +19,25 @@ from quantbench.calibration import (
     percentile_range,
 )
 from quantbench.dtypes import NumericFormat
+
+
+@pytest.fixture()
+def gaussian_with_outliers() -> np.ndarray:
+    """A unit Gaussian bulk with 40 extreme outliers injected on top."""
+    rng = np.random.default_rng(5)
+    obs = rng.normal(0.0, 1.0, 20000)
+    obs[:40] = rng.normal(0.0, 12.0, 40)
+    return obs
+
+
+def test_flatten_observations_concatenates_a_list_of_arrays() -> None:
+    out = flatten_observations([np.array([[1.0, 2.0]]), np.array([3.0])])
+    np.testing.assert_array_equal(out, [1.0, 2.0, 3.0])
+    assert out.dtype == np.float32
+
+
+def test_flatten_observations_rejects_empty_input() -> None:
+    with pytest.raises(ValueError, match="empty list"):
+        flatten_observations([])
+    with pytest.raises(ValueError, match="empty array"):
+        flatten_observations(np.array([], dtype=np.float32))

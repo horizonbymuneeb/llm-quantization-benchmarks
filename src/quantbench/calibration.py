@@ -193,3 +193,76 @@ def _expand_codes(hist: np.ndarray, assignment: np.ndarray, n_levels: int) -> np
     counts = np.bincount(assignment, minlength=n_levels).astype(np.float64)
     per_bin = np.divide(code_mass, counts, out=np.zeros_like(code_mass), where=counts > 0)
     return per_bin[assignment]
+
+
+def _quantise_histogram(hist: np.ndarray, n_levels: int) -> np.ndarray:
+    """Collapse ``hist`` onto ``n_levels`` codes, returning per-code mass."""
+    hist = np.asarray(hist, dtype=np.float64)
+    assignment = _level_assignment(hist.size, n_levels)
+    out = np.zeros(n_levels, dtype=np.float64)
+    np.add.at(out, assignment, hist)
+    return out
+
+
+def entropy_calibration(
+    observations: np.ndarray,
+    n_bins: int = 2048,
+    n_levels: int = 128,
+    steps: int = ENTROPY_SEARCH_STEPS,
+) -> CalibrationResult:
+    """Choose a clip threshold that minimises KL divergence to the original.
+
+    For every candidate threshold the histogram is re-expressed on the integer
+    grid (see :func:`_saturating_assignment`), expanded back to bin resolution,
+    and compared with the reference by ``KL(P || Q)`` in bits.  Both sides keep
+    the full support and the same total mass, so no renormalisation is needed and
+    the tail mass that saturates is accounted for rather than dropped.
+
+    The tension the search resolves: a tighter threshold buys resolution in the
+    dense region but saturates more mass; a wider one keeps the tail but wastes
+    codes on it.  The minimum is the compromise.
+    """
+    if n_levels < 2:
+        raise ValueError("n_levels must be at least 2")
+    if steps < 2:
+        raise ValueError("steps must be at least 2")
+    hist, edges = build_histogram(observations, n_bins)
+    obs = flatten_observations(observations)
+    # Fewer than three occupied bins means the search has nothing to trade off:
+    # every candidate threshold would score identically, and the tie-break would
+    # return an arbitrary clip.  Use the full extent instead.
+    if hist.size <= 2 or int(np.count_nonzero(hist)) <= 2:
+        lo, hi = _padded_extent(obs)
+        return CalibrationResult(lo, hi, "entropy", 0.0, int(obs.size))
+
+    total = float(hist.sum())
+    if total <= 0.0:
+        raise ValueError("cannot calibrate a histogram with no observations")
+    reference = hist / total
+
+    # Search the upper 90% of the extent: clipping below that would discard a
+    # real part of the distribution rather than an outlier tail.
+    lo_cut = max(2, int(hist.size * 0.1))
+    candidates = sorted(
+        {int(c) for c in np.linspace(lo_cut, hist.size, num=max(2, steps))}
+    )
+
+    best_kl = float("inf")
+    best_cut = hist.size
+    for cut in candidates:
+        assignment = _saturating_assignment(hist.size, n_levels, cut)
+        quantised = _expand_codes(hist, assignment, n_levels)
+        q_total = float(quantised.sum())
+        if q_total <= 0.0:
+            continue
+        kl = _kl_divergence(reference, quantised / q_total)
+        if kl < best_kl - 1e-12:
+            best_kl = kl
+            best_cut = cut
+
+    threshold = float(edges[min(best_cut, edges.size - 1)])
+    lo = float(max(obs.min(), -threshold))
+    hi = float(min(obs.max(), threshold))
+    if hi <= lo:
+        hi = lo + 1e-3
+    return CalibrationResult(lo, hi, "entropy", best_kl, int(obs.size))
