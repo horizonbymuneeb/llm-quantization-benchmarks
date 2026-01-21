@@ -395,3 +395,5 @@ if __name__ == '__main__':
 # Vectorize dequantization kernel for speed [2026-01-08T11:14:36]
 
 # Validate models on Wikitext dataset [2026-01-12T17:33:09]
+
+# Optimize CUDA graph for repeated inference [2026-01-21T12:21:55]
