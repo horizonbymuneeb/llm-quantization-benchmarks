@@ -115,3 +115,4 @@
 [2026-01-12T19:50:33] Fix INT4 overflow in weight quantization
 [2026-01-21T12:21:55] Optimize CUDA graph for repeated inference
 [2026-01-22T17:33:41] Implement per-layer quantization sensitivity analysis
+[2026-01-22T15:08:11] Fix race condition in parallel calibration

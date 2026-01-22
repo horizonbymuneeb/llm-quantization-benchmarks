@@ -399,3 +399,5 @@ if __name__ == '__main__':
 # Optimize CUDA graph for repeated inference [2026-01-21T12:21:55]
 
 # Implement per-layer quantization sensitivity analysis [2026-01-22T17:33:41]
+
+# Fix race condition in parallel calibration [2026-01-22T15:08:11]
