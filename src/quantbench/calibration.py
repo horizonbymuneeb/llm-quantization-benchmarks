@@ -333,3 +333,69 @@ def mse_calibration(
     if hi <= lo:
         hi = lo + 1e-3
     return CalibrationResult(lo, hi, "mse", best_err, int(obs.size))
+
+
+def calibrate(
+    observations: np.ndarray | list[np.ndarray],
+    method: str = "entropy",
+    percentile: float = 99.9,
+    n_bins: int = 2048,
+) -> CalibrationResult:
+    """Dispatch to the named calibration method.
+
+    Kept as a single entry point so the sweep code never branches on the method
+    string itself, and adding a method means touching one dispatch table.
+    """
+    obs = flatten_observations(observations)
+    if method == "minmax":
+        return minmax_range(obs)
+    if method == "percentile":
+        return percentile_range(obs, percentile)
+    if method == "entropy":
+        return entropy_calibration(obs, n_bins=n_bins)
+    if method == "mse":
+        return mse_calibration(obs, n_bins=n_bins)
+    raise ValueError(f"unknown calibration method {method!r}")
+
+
+def levels_for_format(fmt: NumericFormat, asymmetric: bool = False) -> int:
+    """Number of distinct codes a format offers.
+
+    INT8 gives 256 unsigned codes; asymmetric mode uses the full set while
+    symmetric mode gives up one code to keep a representable zero.  This number
+    feeds directly into the entropy search, so it must match the quantiser.
+    """
+    if fmt.is_float:
+        return 0
+    if fmt is NumericFormat.INT8:
+        return 256 if asymmetric else 255
+    if fmt is NumericFormat.INT4:
+        return 16 if asymmetric else 15
+    raise ValueError(f"no level count for {fmt}")
+
+
+def calibrate_layer(
+    activations: list[np.ndarray],
+    fmt: NumericFormat,
+    method: str = "entropy",
+    percentile: float = 99.9,
+    n_bins: int = 2048,
+    asymmetric: bool = False,
+) -> CalibrationResult:
+    """Calibrate one layer, using the format's real code count.
+
+    The code count matters: calibrating INT4 with INT8's 256 levels produces a
+    threshold that is too tight, because the search believes it has far more
+    resolution than the grid really offers.
+    """
+    n_levels = levels_for_format(fmt, asymmetric=asymmetric)
+    obs = flatten_observations(activations)
+    if method == "minmax":
+        return minmax_range(obs)
+    if method == "percentile":
+        return percentile_range(obs, percentile)
+    if method == "entropy":
+        return entropy_calibration(obs, n_bins=n_bins, n_levels=max(2, n_levels))
+    if method == "mse":
+        return mse_calibration(obs, n_bins=n_bins, n_levels=max(2, n_levels))
+    raise ValueError(f"unknown calibration method {method!r}")

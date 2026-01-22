@@ -41,3 +41,24 @@ def test_flatten_observations_rejects_empty_input() -> None:
         flatten_observations([])
     with pytest.raises(ValueError, match="empty array"):
         flatten_observations(np.array([], dtype=np.float32))
+
+
+def test_minmax_uses_the_observed_extremes_exactly() -> None:
+    obs = np.array([-3.0, 0.0, 5.0], dtype=np.float32)
+    result = minmax_range(obs)
+    assert result.lower == pytest.approx(-3.0)
+    assert result.upper == pytest.approx(5.0)
+    assert result.method == "minmax"
+    assert result.n_observations == 3
+
+
+def test_minmax_pads_a_constant_observation_into_a_real_range() -> None:
+    result = minmax_range(np.full(10, 4.0, dtype=np.float32))
+    assert result.upper > result.lower
+    assert result.scale > 0.0
+
+
+def test_minmax_of_constant_zero_uses_a_fixed_pad() -> None:
+    result = minmax_range(np.zeros(5, dtype=np.float32))
+    assert result.lower == pytest.approx(-0.5)
+    assert result.upper == pytest.approx(0.5)
