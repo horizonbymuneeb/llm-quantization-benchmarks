@@ -62,3 +62,26 @@ def test_minmax_of_constant_zero_uses_a_fixed_pad() -> None:
     result = minmax_range(np.zeros(5, dtype=np.float32))
     assert result.lower == pytest.approx(-0.5)
     assert result.upper == pytest.approx(0.5)
+
+
+def test_percentile_clips_the_tail_and_reports_the_retained_fraction(
+    gaussian_with_outliers: np.ndarray,
+) -> None:
+    result = percentile_range(gaussian_with_outliers, 99.0)
+    assert result.upper < float(gaussian_with_outliers.max())
+    assert result.metric == pytest.approx(0.99, abs=0.01)
+    assert result.method == "percentile"
+
+
+def test_percentile_retention_rises_with_the_percentile(gaussian_with_outliers: np.ndarray) -> None:
+    tight = percentile_range(gaussian_with_outliers, 90.0)
+    loose = percentile_range(gaussian_with_outliers, 99.9)
+    assert tight.upper < loose.upper
+    assert tight.metric < loose.metric
+
+
+def test_percentile_rejects_an_out_of_range_percentile() -> None:
+    with pytest.raises(ValueError, match="percentile must lie"):
+        percentile_range(np.zeros(10, dtype=np.float32), 100.0)
+    with pytest.raises(ValueError, match="percentile must lie"):
+        percentile_range(np.zeros(10, dtype=np.float32), 49.0)
