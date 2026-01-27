@@ -85,3 +85,22 @@ def test_percentile_rejects_an_out_of_range_percentile() -> None:
         percentile_range(np.zeros(10, dtype=np.float32), 100.0)
     with pytest.raises(ValueError, match="percentile must lie"):
         percentile_range(np.zeros(10, dtype=np.float32), 49.0)
+
+
+def test_build_histogram_counts_every_observation() -> None:
+    obs = np.random.default_rng(1).normal(size=1000)
+    hist, edges = build_histogram(obs, 64)
+    assert hist.size == 64
+    assert edges.size == 65
+    assert float(hist.sum()) == pytest.approx(1000.0)
+    assert edges[0] == 0.0
+
+
+def test_build_histogram_rejects_too_few_bins() -> None:
+    with pytest.raises(ValueError, match="n_bins must be at least"):
+        build_histogram(np.zeros(10), 4)
+
+
+def test_build_histogram_handles_all_zero_input() -> None:
+    hist, edges = build_histogram(np.zeros(10), 32)
+    assert float(hist.sum()) == pytest.approx(10.0)
