@@ -117,3 +117,4 @@
 [2026-01-22T17:33:41] Implement per-layer quantization sensitivity analysis
 [2026-01-22T15:08:11] Fix race condition in parallel calibration
 [2026-01-27T10:15:09] Fix zero-point calculation edge case
+[2026-01-27T10:19:02] Add support for 3-bit quantization

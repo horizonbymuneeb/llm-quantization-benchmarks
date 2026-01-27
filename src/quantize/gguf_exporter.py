@@ -270,3 +270,5 @@ if __name__ == '__main__':
 # Fix INT4 overflow in weight quantization [2026-01-12T19:50:33]
 
 # Fix zero-point calculation edge case [2026-01-27T10:15:09]
+
+# Add support for 3-bit quantization [2026-01-27T10:19:02]
