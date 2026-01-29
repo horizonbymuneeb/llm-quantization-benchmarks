@@ -122,3 +122,23 @@ def test_kl_divergence_is_asymmetric() -> None:
     p = np.array([0.9, 0.1])
     q = np.array([0.5, 0.5])
     assert _kl_divergence(p, q) != pytest.approx(_kl_divergence(q, p))
+
+
+def test_kl_divergence_rejects_mismatched_shapes() -> None:
+    with pytest.raises(ValueError, match="same shape"):
+        _kl_divergence(np.array([0.5, 0.5]), np.array([1.0]))
+
+
+def test_entropy_clips_the_outlier_tail(gaussian_with_outliers: np.ndarray) -> None:
+    result = entropy_calibration(gaussian_with_outliers)
+    assert result.method == "entropy"
+    assert result.upper < float(gaussian_with_outliers.max())
+    # It must not clip so hard that the bulk of a unit Gaussian is lost.
+    assert result.upper > 2.0
+    assert result.metric >= 0.0
+
+
+def test_entropy_kl_improves_with_more_levels(gaussian_with_outliers: np.ndarray) -> None:
+    coarse = entropy_calibration(gaussian_with_outliers, n_levels=8)
+    fine = entropy_calibration(gaussian_with_outliers, n_levels=256)
+    assert fine.metric < coarse.metric

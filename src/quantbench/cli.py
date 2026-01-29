@@ -171,3 +171,62 @@ def cmd_compare(args: argparse.Namespace) -> int:
             f"d_flip={row['flip_rate_diff']:+.6f}"
         )
     return 0
+
+
+def cmd_calibrate(args: argparse.Namespace) -> int:
+    """Train, then print the calibrated activation ranges per layer."""
+    config = load_config(args.config)
+    dataset = build_dataset(config.data)
+    params, _ = build_and_train(
+        config.model,
+        dataset.n_features,
+        dataset.n_classes,
+        dataset.x_train,
+        dataset.y_train,
+        dataset.x_test,
+        dataset.y_test,
+    )
+    x_cal, _ = calibration_subset(
+        dataset, config.calibration.n_calibration_samples, config.calibration.seed
+    )
+    _, cache = forward(params, x_cal, config.model.activation, record=True)
+    assert cache is not None
+    from .calibration import calibrate
+
+    print(f"method={config.calibration.method} samples={x_cal.shape[0]}")
+    print(f"  {'input':<12s} range=[{x_cal.min():+.4f}, {x_cal.max():+.4f}]")
+    for i, post in enumerate(cache.post_activations):
+        res = calibrate(
+            post,
+            method=config.calibration.method,
+            percentile=config.calibration.percentile,
+            n_bins=config.calibration.n_bins,
+        )
+        print(
+            f"  hidden_{i:<5d} range=[{res.lower:+.4f}, {res.upper:+.4f}] "
+            f"metric={res.metric:.6f}"
+        )
+    return 0
+
+
+def print_delta_table(config: SweepConfig) -> None:
+    """Run a sweep and print the compact delta table only.
+
+    Exposed as a function because it is the quickest way to see whether a config
+    change altered the conclusions, and it is what the Makefile calls.
+    """
+    result = run_sweep(config)
+    table = row_delta_table(result.rows)
+    print(f"{'configuration':<36s} {'x':>6s} {'acc':>8s} {'delta':>8s} {'flips':>8s}")
+    for row in table:
+        print(
+            f"{row['label']:<36s} {row['compression']:>6.2f} "
+            f"{row['accuracy']:>8.4f} {row['delta']:>+8.4f} {row['flip_rate']:>8.4f}"
+        )
+    aggregates = aggregate_by_format(result.rows)
+    print()
+    for fmt, stats in sorted(aggregates.items()):
+        print(
+            f"{fmt:<6s} mean_delta={stats['mean_accuracy_delta']:+.4f} "
+            f"mean_flips={stats['mean_flip_rate']:.4f}"
+        )
