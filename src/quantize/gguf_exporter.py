@@ -272,3 +272,5 @@ if __name__ == '__main__':
 # Fix zero-point calculation edge case [2026-01-27T10:15:09]
 
 # Add support for 3-bit quantization [2026-01-27T10:19:02]
+
+# Add benchmarking for Mistral models [2026-01-29T12:19:23]
