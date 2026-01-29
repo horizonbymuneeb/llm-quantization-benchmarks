@@ -403,3 +403,5 @@ if __name__ == '__main__':
 # Fix race condition in parallel calibration [2026-01-22T15:08:11]
 
 # Update benchmarking suite with new metrics [2026-01-29T14:54:18]
+
+# Add support for 3-bit quantization [2026-01-29T19:36:32]
