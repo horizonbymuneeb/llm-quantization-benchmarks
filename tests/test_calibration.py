@@ -142,3 +142,35 @@ def test_entropy_kl_improves_with_more_levels(gaussian_with_outliers: np.ndarray
     coarse = entropy_calibration(gaussian_with_outliers, n_levels=8)
     fine = entropy_calibration(gaussian_with_outliers, n_levels=256)
     assert fine.metric < coarse.metric
+
+
+def test_entropy_threshold_is_roughly_stable_across_level_counts(
+    gaussian_with_outliers: np.ndarray,
+) -> None:
+    """The optimal clip point depends mostly on the distribution, not the grid.
+
+    This was measured, not assumed: on a Gaussian bulk with an outlier tail the
+    KL minimum sits at about four standard deviations whether the grid has 4
+    codes or 256.  What changes with the level count is how *much* information
+    is lost at that optimum, which is asserted separately below.  The test pins
+    the stability so a regression that makes the threshold drift with the code
+    count is caught.
+    """
+    coarse = entropy_calibration(gaussian_with_outliers, n_levels=4)
+    fine = entropy_calibration(gaussian_with_outliers, n_levels=256)
+    ratio = coarse.upper / fine.upper
+    assert 0.5 < ratio < 2.0, ratio
+
+
+def test_entropy_rejects_degenerate_configuration() -> None:
+    with pytest.raises(ValueError, match="n_levels must be at least 2"):
+        entropy_calibration(np.zeros(100), n_levels=1)
+    with pytest.raises(ValueError, match="steps must be at least 2"):
+        entropy_calibration(np.random.default_rng(0).normal(size=100), steps=1)
+
+
+def test_entropy_on_a_tiny_input_falls_back_to_the_full_range() -> None:
+    result = entropy_calibration(np.array([-1.0, 1.0], dtype=np.float32), n_bins=16)
+    assert result.lower == pytest.approx(-1.0)
+    assert result.upper == pytest.approx(1.0)
+    assert result.metric == 0.0

@@ -230,3 +230,42 @@ def print_delta_table(config: SweepConfig) -> None:
             f"{fmt:<6s} mean_delta={stats['mean_accuracy_delta']:+.4f} "
             f"mean_flips={stats['mean_flip_rate']:.4f}"
         )
+
+
+def main(argv: Sequence[str] | None = None) -> int:
+    """CLI entry point; returns a process exit code."""
+    parser = build_parser()
+    args = parser.parse_args(argv)
+    if getattr(args, "version", False):
+        from . import __version__
+
+        print(f"quantbench {__version__}")
+        return 0
+    if args.command is None:
+        parser.print_help()
+        return 2
+    handlers = {
+        "sweep": cmd_sweep,
+        "inspect": cmd_inspect,
+        "compare": cmd_compare,
+        "calibrate": cmd_calibrate,
+    }
+    handler = handlers.get(args.command)
+    if handler is None:
+        parser.error(f"unknown command {args.command!r}")
+        return 2
+    try:
+        return int(handler(args))
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"error: {exc}", file=sys.stderr)
+        return 1
+
+
+def dump_config(path: str | None = None) -> None:
+    """Print the effective configuration as JSON; used by ``make config``."""
+    config = load_config(path)
+    print(json.dumps(config_to_dict(config), indent=2))
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
