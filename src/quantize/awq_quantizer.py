@@ -401,3 +401,5 @@ if __name__ == '__main__':
 # Implement per-layer quantization sensitivity analysis [2026-01-22T17:33:41]
 
 # Fix race condition in parallel calibration [2026-01-22T15:08:11]
+
+# Update benchmarking suite with new metrics [2026-01-29T14:54:18]
