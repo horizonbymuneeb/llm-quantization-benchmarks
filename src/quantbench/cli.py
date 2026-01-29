@@ -94,3 +94,80 @@ def cmd_sweep(args: argparse.Namespace) -> int:
         print(summarise_report(report))
     print(f"wrote report to {path}")
     return 0
+
+
+def _replace_output(config: SweepConfig, output: str) -> SweepConfig:
+    """Return a copy of ``config`` with a different output directory."""
+    from dataclasses import replace
+
+    return replace(config, output_dir=output)
+
+
+def cmd_inspect(args: argparse.Namespace) -> int:
+    """Train the reference model and evaluate one quantisation configuration."""
+    config = load_config(args.config)
+    fmt = NumericFormat.from_string(args.format)
+    dataset = build_dataset(config.data)
+    params, history = build_and_train(
+        config.model,
+        dataset.n_features,
+        dataset.n_classes,
+        dataset.x_train,
+        dataset.y_train,
+        dataset.x_test,
+        dataset.y_test,
+    )
+    ref_probs, ref_acc = evaluate_model(params, dataset, config.model.activation)
+    model = quantize_model(params, fmt, args.scheme, args.granularity, seed=config.model.seed)
+    cand_probs, cand_acc = evaluate_model(model.params, dataset, config.model.activation)
+
+    from .metrics import compare_predictions
+
+    behaviour = compare_predictions(
+        ref_probs, cand_probs, dataset.y_test, dataset.n_classes
+    )
+    payload = {
+        "format": fmt.value,
+        "scheme": args.scheme,
+        "granularity": args.granularity,
+        "reference_accuracy": ref_acc,
+        "candidate_accuracy": cand_acc,
+        "training_epochs": len(history.train_loss),
+        "weight_error": weight_error_report(params, model.params),
+        "layer_rmse": {k: round(v["rmse"], 8) for k, v in model.layer_stats.items()},
+        "scale_spread": {k: round(v, 4) for k, v in model.scale_spread().items()},
+        "behaviour": behaviour,
+    }
+    if args.json:
+        print(json.dumps(payload, indent=2, default=str))
+        return 0
+    print(f"format={fmt.value} scheme={args.scheme} granularity={args.granularity}")
+    print(f"reference accuracy {ref_acc:.4f} -> candidate {cand_acc:.4f}")
+    print(f"flip rate {behaviour['churn']['flip_rate']:.4f} "
+          f"(gained {behaviour['churn']['gained']:.0f}, lost {behaviour['churn']['lost']:.0f})")
+    print(f"spearman {behaviour['rank']['spearman_global']:.4f}")
+    for name, rmse in payload["layer_rmse"].items():
+        print(f"  {name:<20s} rmse={rmse:.6f}")
+    return 0
+
+
+def cmd_compare(args: argparse.Namespace) -> int:
+    """Diff two report files and print the differences."""
+    diff = compare_reports(load_report(args.baseline), load_report(args.candidate))
+    if args.json:
+        print(json.dumps(diff, indent=2))
+        return 0
+    print(f"shared configurations: {diff['n_shared_configs']}")
+    if diff["only_in_baseline"]:
+        print(f"only in baseline: {', '.join(diff['only_in_baseline'])}")
+    if diff["only_in_candidate"]:
+        print(f"only in candidate: {', '.join(diff['only_in_candidate'])}")
+    ref_diff = diff["reference_accuracy_diff"]
+    if ref_diff is not None:
+        print(f"reference accuracy difference: {ref_diff:+.6f}")
+    for row in diff["rows"]:
+        print(
+            f"  {row['label']:<34s} d_acc={row['accuracy_delta_diff']:+.6f} "
+            f"d_flip={row['flip_rate_diff']:+.6f}"
+        )
+    return 0

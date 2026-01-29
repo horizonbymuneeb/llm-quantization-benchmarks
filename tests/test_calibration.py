@@ -104,3 +104,21 @@ def test_build_histogram_rejects_too_few_bins() -> None:
 def test_build_histogram_handles_all_zero_input() -> None:
     hist, edges = build_histogram(np.zeros(10), 32)
     assert float(hist.sum()) == pytest.approx(10.0)
+
+
+def test_kl_divergence_of_identical_distributions_is_zero() -> None:
+    p = np.array([0.25, 0.25, 0.5])
+    assert _kl_divergence(p, p) == pytest.approx(0.0, abs=1e-12)
+
+
+def test_kl_divergence_matches_the_analytic_value() -> None:
+    p = np.array([1.0, 0.0])
+    q = np.array([0.5, 0.5])
+    # KL((1,0) || (.5,.5)) = 1 * log2(1 / 0.5) = 1 bit.
+    assert _kl_divergence(p, q) == pytest.approx(1.0)
+
+
+def test_kl_divergence_is_asymmetric() -> None:
+    p = np.array([0.9, 0.1])
+    q = np.array([0.5, 0.5])
+    assert _kl_divergence(p, q) != pytest.approx(_kl_divergence(q, p))
