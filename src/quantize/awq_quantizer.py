@@ -405,3 +405,5 @@ if __name__ == '__main__':
 # Update benchmarking suite with new metrics [2026-01-29T14:54:18]
 
 # Add support for 3-bit quantization [2026-01-29T19:36:32]
+
+# Optimize AWQ calibration loop for better accuracy [2026-02-01T14:29:53]
