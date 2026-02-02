@@ -274,3 +274,5 @@ if __name__ == '__main__':
 # Add support for 3-bit quantization [2026-01-27T10:19:02]
 
 # Add benchmarking for Mistral models [2026-01-29T12:19:23]
+
+# Update requirements for torch 2.2.0 [2026-02-02T19:04:52]

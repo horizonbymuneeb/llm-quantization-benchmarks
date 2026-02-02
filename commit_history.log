@@ -123,3 +123,4 @@
 [2026-01-29T12:19:23] Add benchmarking for Mistral models
 [2026-02-01T14:29:53] Optimize AWQ calibration loop for better accuracy
 [2026-02-02T12:40:23] Vectorize dequantization kernel for speed
+[2026-02-02T19:04:52] Update requirements for torch 2.2.0
