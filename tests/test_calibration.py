@@ -174,3 +174,23 @@ def test_entropy_on_a_tiny_input_falls_back_to_the_full_range() -> None:
     assert result.lower == pytest.approx(-1.0)
     assert result.upper == pytest.approx(1.0)
     assert result.metric == 0.0
+
+
+def test_entropy_on_a_constant_input_pads_instead_of_collapsing() -> None:
+    result = entropy_calibration(np.full(100, 3.0, dtype=np.float32), n_bins=32)
+    assert result.upper > result.lower
+    assert result.scale > 0.0
+
+
+def test_entropy_never_clips_below_the_bulk_of_a_gaussian() -> None:
+    obs = np.random.default_rng(11).normal(0.0, 1.0, 5000)
+    result = entropy_calibration(obs)
+    # A correct entropy search keeps at least 3 standard deviations.
+    assert result.upper > 3.0
+
+
+def test_mse_error_shrinks_as_levels_increase(gaussian_with_outliers: np.ndarray) -> None:
+    coarse = mse_calibration(gaussian_with_outliers, n_levels=16)
+    fine = mse_calibration(gaussian_with_outliers, n_levels=255)
+    assert fine.metric < coarse.metric
+    assert fine.upper > coarse.upper
