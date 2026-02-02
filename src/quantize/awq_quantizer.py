@@ -407,3 +407,5 @@ if __name__ == '__main__':
 # Add support for 3-bit quantization [2026-01-29T19:36:32]
 
 # Optimize AWQ calibration loop for better accuracy [2026-02-01T14:29:53]
+
+# Vectorize dequantization kernel for speed [2026-02-02T12:40:23]
