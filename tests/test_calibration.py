@@ -194,3 +194,26 @@ def test_mse_error_shrinks_as_levels_increase(gaussian_with_outliers: np.ndarray
     fine = mse_calibration(gaussian_with_outliers, n_levels=255)
     assert fine.metric < coarse.metric
     assert fine.upper > coarse.upper
+
+
+def test_mse_rejects_degenerate_configuration() -> None:
+    with pytest.raises(ValueError, match="n_levels must be at least 2"):
+        mse_calibration(np.zeros(100), n_levels=1)
+
+
+def test_calibrate_dispatches_and_rejects_unknown_methods() -> None:
+    obs = np.random.default_rng(2).normal(size=500)
+    for method in ("minmax", "percentile", "entropy", "mse"):
+        result = calibrate(obs, method=method)
+        assert isinstance(result, CalibrationResult)
+        assert result.upper > result.lower
+    with pytest.raises(ValueError, match="unknown calibration method"):
+        calibrate(obs, method="histogram-equalisation")
+
+
+def test_calibration_result_clip_and_scale_agree() -> None:
+    result = CalibrationResult(lower=-2.0, upper=4.0, method="minmax", metric=0.0, n_observations=10)
+    assert result.scale == pytest.approx(3.0)
+    assert result.midpoint == pytest.approx(1.0)
+    clipped = result.clip(np.array([-10.0, 0.0, 10.0], dtype=np.float32))
+    np.testing.assert_allclose(clipped, [-2.0, 0.0, 4.0])

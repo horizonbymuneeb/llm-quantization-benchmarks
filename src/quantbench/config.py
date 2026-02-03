@@ -101,3 +101,87 @@ class CalibrationConfig:
             raise ValueError("n_bins must be at least 16")
         if self.n_calibration_samples < 1:
             raise ValueError("n_calibration_samples must be positive")
+
+
+@dataclass(frozen=True)
+class QuantConfig:
+    """One point in quantisation design space."""
+
+    format: NumericFormat = NumericFormat.INT8
+    scheme: str = "symmetric"
+    granularity: str = "per_channel"
+    round_mode: str = "nearest"
+
+    def validate(self) -> None:
+        """Validate scheme/granularity combinations."""
+        if self.scheme not in ("symmetric", "asymmetric"):
+            raise ValueError(f"scheme must be symmetric or asymmetric, got {self.scheme!r}")
+        if self.granularity not in ("per_tensor", "per_channel"):
+            raise ValueError(
+                f"granularity must be per_tensor or per_channel, got {self.granularity!r}"
+            )
+        if self.round_mode not in ("nearest", "stochastic"):
+            raise ValueError(f"unknown round_mode {self.round_mode!r}")
+        if self.scheme == "asymmetric" and self.format.is_float:
+            # Float formats have no zero point; asymmetric is meaningless there.
+            raise ValueError(
+                f"asymmetric quantisation requires an integer format, got {self.format.value}"
+            )
+
+    @property
+    def label(self) -> str:
+        """Short stable identifier used as a report key."""
+        return f"{self.format.value}-{self.scheme}-{self.granularity}"
+
+
+@dataclass(frozen=True)
+class SweepConfig:
+    """The full experiment matrix read from ``config.yaml``."""
+
+    model: ModelConfig = field(default_factory=ModelConfig)
+    data: DataConfig = field(default_factory=DataConfig)
+    calibration: CalibrationConfig = field(default_factory=CalibrationConfig)
+    formats: tuple[NumericFormat, ...] = (
+        NumericFormat.FP32,
+        NumericFormat.BF16,
+        NumericFormat.INT8,
+        NumericFormat.INT4,
+    )
+    schemes: tuple[str, ...] = ("symmetric", "asymmetric")
+    granularities: tuple[str, ...] = ("per_tensor", "per_channel")
+    weight_layers_only: bool = True
+    include_sensitivity: bool = True
+    sensitivity_top_k: int = 4
+    output_dir: str = "reports"
+    report_name: str = "sweep_report.json"
+
+    def validate(self) -> None:
+        """Validate every nested section plus the matrix itself."""
+        self.model.validate()
+        self.data.validate()
+        self.calibration.validate()
+        if not self.formats:
+            raise ValueError("at least one numeric format is required")
+        if not self.schemes:
+            raise ValueError("at least one scheme is required")
+        if not self.granularities:
+            raise ValueError("at least one granularity is required")
+        if self.sensitivity_top_k < 1:
+            raise ValueError("sensitivity_top_k must be positive")
+
+    def quant_grid(self) -> list[QuantConfig]:
+        """Expand the matrix into concrete :class:`QuantConfig` points.
+
+        Float formats have no scheme or granularity, so they contribute exactly
+        one point each instead of the full cross product.  That keeps the report
+        from filling with twelve identical BF16 rows.
+        """
+        points: list[QuantConfig] = []
+        for fmt in self.formats:
+            if fmt.is_float:
+                points.append(QuantConfig(format=fmt, scheme="symmetric", granularity="per_tensor"))
+                continue
+            for scheme in self.schemes:
+                for gran in self.granularities:
+                    points.append(QuantConfig(format=fmt, scheme=scheme, granularity=gran))
+        return points
