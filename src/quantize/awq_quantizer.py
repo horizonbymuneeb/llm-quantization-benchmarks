@@ -411,3 +411,5 @@ if __name__ == '__main__':
 # Vectorize dequantization kernel for speed [2026-02-02T12:40:23]
 
 # Add unit tests for int4 packing utils [2026-02-04T18:47:17]
+
+# Implement GPTQ quantization alternative [2026-02-04T15:16:35]
