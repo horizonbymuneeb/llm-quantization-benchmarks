@@ -243,3 +243,18 @@ def test_calibrate_layer_uses_the_format_level_count(gaussian_with_outliers: np.
     # size; the chosen threshold itself barely moves.
     assert int4.metric > int8.metric
     assert int4.upper == pytest.approx(int8.upper, rel=0.5)
+
+
+def test_calibrate_layer_supports_every_method(gaussian_with_outliers: np.ndarray) -> None:
+    for method in ("minmax", "percentile", "entropy", "mse"):
+        result = calibrate_layer([gaussian_with_outliers], NumericFormat.INT8, method=method)
+        assert result.upper > result.lower
+    with pytest.raises(ValueError, match="unknown calibration method"):
+        calibrate_layer([gaussian_with_outliers], NumericFormat.INT8, method="nope")
+
+
+def test_calibration_is_deterministic() -> None:
+    obs = np.random.default_rng(3).normal(size=2000)
+    first = entropy_calibration(obs).upper
+    second = entropy_calibration(obs).upper
+    assert first == second

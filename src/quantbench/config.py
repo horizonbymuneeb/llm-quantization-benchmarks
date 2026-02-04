@@ -244,3 +244,33 @@ def load_config(path: str | Path | None = None) -> SweepConfig:
     )
     config.validate()
     return config
+
+
+def config_to_dict(config: SweepConfig) -> dict[str, Any]:
+    """Serialise a config back to plain JSON-compatible data.
+
+    Written into every report so a result can be traced to the exact settings
+    that produced it without keeping the YAML around.
+    """
+    def conv(value: Any) -> Any:
+        if isinstance(value, NumericFormat):
+            return value.value
+        if isinstance(value, tuple):
+            return [conv(v) for v in value]
+        if isinstance(value, dict):
+            return {k: conv(v) for k, v in value.items()}
+        return value
+
+    return {
+        "model": conv(dataclasses.asdict(config.model)),
+        "data": conv(dataclasses.asdict(config.data)),
+        "calibration": conv(dataclasses.asdict(config.calibration)),
+        "formats": [f.value for f in config.formats],
+        "schemes": list(config.schemes),
+        "granularities": list(config.granularities),
+        "weight_layers_only": config.weight_layers_only,
+        "include_sensitivity": config.include_sensitivity,
+        "sensitivity_top_k": config.sensitivity_top_k,
+        "output_dir": config.output_dir,
+        "report_name": config.report_name,
+    }
