@@ -217,3 +217,29 @@ def test_calibration_result_clip_and_scale_agree() -> None:
     assert result.midpoint == pytest.approx(1.0)
     clipped = result.clip(np.array([-10.0, 0.0, 10.0], dtype=np.float32))
     np.testing.assert_allclose(clipped, [-2.0, 0.0, 4.0])
+
+
+def test_calibration_result_as_dict_is_json_safe() -> None:
+    result = minmax_range(np.array([-1.0, 1.0], dtype=np.float32))
+    payload = result.as_dict()
+    assert payload["method"] == "minmax"
+    assert payload["n_observations"] == 2
+    assert isinstance(payload["lower"], float)
+
+
+def test_levels_for_format_matches_the_grid() -> None:
+    assert levels_for_format(NumericFormat.INT8) == 255
+    assert levels_for_format(NumericFormat.INT8, asymmetric=True) == 256
+    assert levels_for_format(NumericFormat.INT4) == 15
+    assert levels_for_format(NumericFormat.INT4, asymmetric=True) == 16
+    assert levels_for_format(NumericFormat.BF16) == 0
+
+
+def test_calibrate_layer_uses_the_format_level_count(gaussian_with_outliers: np.ndarray) -> None:
+    int8 = calibrate_layer([gaussian_with_outliers], NumericFormat.INT8, method="entropy")
+    int4 = calibrate_layer([gaussian_with_outliers], NumericFormat.INT4, method="entropy")
+    # INT4 has 15 codes against INT8's 255, so at a comparable clip point it
+    # loses far more information.  That is the measurable effect of the grid
+    # size; the chosen threshold itself barely moves.
+    assert int4.metric > int8.metric
+    assert int4.upper == pytest.approx(int8.upper, rel=0.5)

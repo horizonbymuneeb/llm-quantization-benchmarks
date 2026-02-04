@@ -185,3 +185,62 @@ class SweepConfig:
                 for gran in self.granularities:
                     points.append(QuantConfig(format=fmt, scheme=scheme, granularity=gran))
         return points
+
+
+def _as_tuple(value: Any) -> tuple[Any, ...]:
+    """Coerce a YAML list (or scalar) into a tuple."""
+    if value is None:
+        return ()
+    if isinstance(value, (list, tuple)):
+        return tuple(value)
+    return (value,)
+
+
+def _build(cls: type, payload: dict[str, Any] | None) -> Any:
+    """Instantiate a dataclass from a partial dict, ignoring unknown keys loudly."""
+    payload = payload or {}
+    names = {f.name for f in dataclasses.fields(cls)}
+    unknown = set(payload) - names
+    if unknown:
+        raise ValueError(f"unknown keys for {cls.__name__}: {sorted(unknown)}")
+    kwargs: dict[str, Any] = {}
+    for key, value in payload.items():
+        if key in ("hidden_sizes", "formats", "schemes", "granularities"):
+            kwargs[key] = _as_tuple(value)
+        else:
+            kwargs[key] = value
+    return cls(**kwargs)
+
+
+def load_config(path: str | Path | None = None) -> SweepConfig:
+    """Read a YAML file and return a validated :class:`SweepConfig`.
+
+    A missing file is an error: silently running with defaults would make a
+    report that does not correspond to the config the user thinks they ran.
+    """
+    cfg_path = Path(path) if path is not None else DEFAULT_CONFIG_PATH
+    if not cfg_path.exists():
+        raise FileNotFoundError(f"config file not found: {cfg_path}")
+    raw = yaml.safe_load(cfg_path.read_text(encoding="utf-8")) or {}
+    if not isinstance(raw, dict):
+        raise ValueError(f"config root must be a mapping, got {type(raw).__name__}")
+
+    formats = tuple(
+        NumericFormat.from_string(str(f)) for f in _as_tuple(raw.get("formats"))
+    ) or SweepConfig.formats
+
+    config = SweepConfig(
+        model=_build(ModelConfig, raw.get("model")),
+        data=_build(DataConfig, raw.get("data")),
+        calibration=_build(CalibrationConfig, raw.get("calibration")),
+        formats=formats,
+        schemes=_as_tuple(raw.get("schemes")) or SweepConfig.schemes,
+        granularities=_as_tuple(raw.get("granularities")) or SweepConfig.granularities,
+        weight_layers_only=bool(raw.get("weight_layers_only", True)),
+        include_sensitivity=bool(raw.get("include_sensitivity", True)),
+        sensitivity_top_k=int(raw.get("sensitivity_top_k", 4)),
+        output_dir=str(raw.get("output_dir", "reports")),
+        report_name=str(raw.get("report_name", "sweep_report.json")),
+    )
+    config.validate()
+    return config
