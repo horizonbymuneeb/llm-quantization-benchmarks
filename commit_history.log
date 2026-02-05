@@ -127,3 +127,4 @@
 [2026-02-03T15:01:46] Add benchmarking for Mistral models
 [2026-02-04T18:47:17] Add unit tests for int4 packing utils
 [2026-02-04T15:16:35] Implement GPTQ quantization alternative
+[2026-02-05T12:22:53] Profile memory bandwidth vs compute bottlenecks

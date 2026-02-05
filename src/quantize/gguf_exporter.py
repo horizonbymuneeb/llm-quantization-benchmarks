@@ -278,3 +278,5 @@ if __name__ == '__main__':
 # Update requirements for torch 2.2.0 [2026-02-02T19:04:52]
 
 # Add benchmarking for Mistral models [2026-02-03T15:01:46]
+
+# Profile memory bandwidth vs compute bottlenecks [2026-02-05T12:22:53]
