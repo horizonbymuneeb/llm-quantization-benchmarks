@@ -280,3 +280,5 @@ if __name__ == '__main__':
 # Add benchmarking for Mistral models [2026-02-03T15:01:46]
 
 # Profile memory bandwidth vs compute bottlenecks [2026-02-05T12:22:53]
+
+# Optimize AWQ calibration loop for better accuracy [2026-02-10T15:07:08]
