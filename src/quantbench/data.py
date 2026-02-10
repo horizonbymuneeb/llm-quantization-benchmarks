@@ -65,3 +65,51 @@ def _standardise(x: np.ndarray) -> np.ndarray:
     std = x.std(axis=0, keepdims=True)
     std = np.where(std < 1e-8, 1.0, std)
     return ((x - mean) / std).astype(np.float32)
+
+
+def make_clusters(
+    n_samples: int,
+    n_features: int,
+    n_classes: int,
+    n_informative: int,
+    class_sep: float,
+    noise: float,
+    seed: int,
+) -> tuple[np.ndarray, np.ndarray]:
+    """Isotropic Gaussian blobs with ``class_sep`` between centres.
+
+    Only ``n_informative`` dimensions carry class signal; the rest are pure
+    noise.  That matters for quantisation: a weight column that is essentially
+    noise can be crushed to a few levels without hurting accuracy, while a
+    signal column cannot, so the per-channel scales end up very uneven — which
+    is exactly the situation where per-channel beats per-tensor.
+    """
+    rng = np.random.default_rng(seed)
+    centres = rng.normal(0.0, class_sep, size=(n_classes, n_informative))
+    per_class = _split_counts(n_samples, n_classes)
+    labels = np.repeat(np.arange(n_classes), per_class)
+    rng.shuffle(labels)
+
+    informative = np.empty((n_samples, n_informative), dtype=np.float32)
+    for cls in range(n_classes):
+        mask = labels == cls
+        count = int(mask.sum())
+        if count == 0:
+            continue
+        informative[mask] = centres[cls] + rng.normal(
+            0.0, noise, size=(count, n_informative)
+        )
+
+    x = np.empty((n_samples, n_features), dtype=np.float32)
+    x[:, :n_informative] = informative
+    if n_features > n_informative:
+        x[:, n_informative:] = rng.normal(0.0, noise, size=(n_samples, n_features - n_informative))
+    return _standardise(x), labels.astype(np.int64)
+
+
+def _split_counts(n_samples: int, n_classes: int) -> np.ndarray:
+    """Split ``n_samples`` across classes as evenly as possible."""
+    base = n_samples // n_classes
+    counts = np.full(n_classes, base, dtype=np.int64)
+    counts[: n_samples % n_classes] += 1
+    return counts
