@@ -17,3 +17,18 @@ from quantbench.config import (
     load_config,
 )
 from quantbench.dtypes import NumericFormat
+
+
+def _write(tmp_path: Path, body: str) -> Path:
+    path = tmp_path / "config.yaml"
+    path.write_text(textwrap.dedent(body), encoding="utf-8")
+    return path
+
+
+def test_default_model_config_is_valid() -> None:
+    ModelConfig().validate()
+
+
+def test_model_config_rejects_empty_hidden_sizes() -> None:
+    with pytest.raises(ValueError, match="at least one layer"):
+        ModelConfig(hidden_sizes=()).validate()
