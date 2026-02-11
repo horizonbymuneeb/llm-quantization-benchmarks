@@ -129,3 +129,4 @@
 [2026-02-04T15:16:35] Implement GPTQ quantization alternative
 [2026-02-05T12:22:53] Profile memory bandwidth vs compute bottlenecks
 [2026-02-10T15:07:08] Optimize AWQ calibration loop for better accuracy
+[2026-02-11T20:15:52] Optimize AWQ calibration loop for better accuracy

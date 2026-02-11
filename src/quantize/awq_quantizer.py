@@ -413,3 +413,5 @@ if __name__ == '__main__':
 # Add unit tests for int4 packing utils [2026-02-04T18:47:17]
 
 # Implement GPTQ quantization alternative [2026-02-04T15:16:35]
+
+# Optimize AWQ calibration loop for better accuracy [2026-02-11T20:15:52]
