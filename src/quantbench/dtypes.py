@@ -55,3 +55,42 @@ class NumericFormat(enum.Enum):
             f"unknown numeric format {name!r}; expected one of "
             f"{sorted(f.value for f in cls)}"
         )
+
+
+_FORMAT_BITS: dict[NumericFormat, int] = {
+    NumericFormat.FP32: 32,
+    NumericFormat.FP16: 16,
+    NumericFormat.BF16: 16,
+    NumericFormat.INT8: 8,
+    NumericFormat.INT4: 4,
+}
+
+
+@dataclass(frozen=True)
+class FormatSpec:
+    """Static description of a numeric format: bit layout and range."""
+
+    fmt: NumericFormat
+    exponent_bits: int
+    mantissa_bits: int
+    signed: bool
+
+    @property
+    def total_bits(self) -> int:
+        """Bits actually stored per value, including the sign bit."""
+        return 1 + self.exponent_bits + self.mantissa_bits if self.is_float else self.fmt.bits
+
+    @property
+    def is_float(self) -> bool:
+        """Mirror of :attr:`NumericFormat.is_float` for convenience."""
+        return self.fmt.is_float
+
+    @property
+    def integer_range(self) -> tuple[int, int]:
+        """Inclusive ``(low, high)`` integer range for integer formats."""
+        if not self.fmt.is_integer:
+            raise TypeError(f"{self.fmt.value} is not an integer format")
+        if self.signed:
+            half = self.fmt.bits - 1
+            return (-(1 << half), (1 << half) - 1)
+        return (0, (1 << self.fmt.bits) - 1)

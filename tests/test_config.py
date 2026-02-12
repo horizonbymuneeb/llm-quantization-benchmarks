@@ -64,3 +64,18 @@ def test_data_config_rejects_a_too_small_sample_count() -> None:
 def test_data_config_rejects_an_out_of_range_informative_count() -> None:
     with pytest.raises(ValueError, match="n_informative must be within"):
         DataConfig(n_features=5, n_informative=6).validate()
+
+
+def test_data_config_rejects_an_unknown_generator() -> None:
+    with pytest.raises(ValueError, match="unknown generator"):
+        DataConfig(generator="spirals").validate()
+
+
+def test_data_config_rejects_a_degenerate_test_fraction() -> None:
+    with pytest.raises(ValueError, match="test_fraction must lie"):
+        DataConfig(test_fraction=1.0).validate()
+
+
+def test_calibration_config_rejects_an_unknown_method() -> None:
+    with pytest.raises(ValueError, match="calibration method must be one of"):
+        CalibrationConfig(method="histogram").validate()
