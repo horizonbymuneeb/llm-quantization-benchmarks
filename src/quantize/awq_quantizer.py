@@ -417,3 +417,5 @@ if __name__ == '__main__':
 # Optimize AWQ calibration loop for better accuracy [2026-02-11T20:15:52]
 
 # Implement per-layer quantization sensitivity analysis [2026-02-12T10:37:39]
+
+# Implement dynamic bit-width selection [2026-02-12T12:41:44]
