@@ -415,3 +415,5 @@ if __name__ == '__main__':
 # Implement GPTQ quantization alternative [2026-02-04T15:16:35]
 
 # Optimize AWQ calibration loop for better accuracy [2026-02-11T20:15:52]
+
+# Implement per-layer quantization sensitivity analysis [2026-02-12T10:37:39]
