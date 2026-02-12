@@ -47,3 +47,20 @@ def test_model_config_rejects_an_unknown_activation() -> None:
 def test_model_config_rejects_a_non_positive_learning_rate() -> None:
     with pytest.raises(ValueError, match="learning_rate must be positive"):
         ModelConfig(learning_rate=0.0).validate()
+
+
+def test_model_config_layers_returns_a_mutable_list() -> None:
+    config = ModelConfig(hidden_sizes=(32, 16))
+    layers = config.layers
+    layers.append(8)
+    assert config.hidden_sizes == (32, 16)
+
+
+def test_data_config_rejects_a_too_small_sample_count() -> None:
+    with pytest.raises(ValueError, match="at least 20"):
+        DataConfig(n_samples=10).validate()
+
+
+def test_data_config_rejects_an_out_of_range_informative_count() -> None:
+    with pytest.raises(ValueError, match="n_informative must be within"):
+        DataConfig(n_features=5, n_informative=6).validate()
