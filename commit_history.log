@@ -133,3 +133,4 @@
 [2026-02-12T17:04:50] Profile memory bandwidth vs compute bottlenecks
 [2026-02-12T10:37:39] Implement per-layer quantization sensitivity analysis
 [2026-02-12T12:41:44] Implement dynamic bit-width selection
+[2026-02-12T10:21:53] Implement GPTQ quantization alternative

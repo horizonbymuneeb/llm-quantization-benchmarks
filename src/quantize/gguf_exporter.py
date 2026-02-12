@@ -284,3 +284,5 @@ if __name__ == '__main__':
 # Optimize AWQ calibration loop for better accuracy [2026-02-10T15:07:08]
 
 # Profile memory bandwidth vs compute bottlenecks [2026-02-12T17:04:50]
+
+# Implement GPTQ quantization alternative [2026-02-12T10:21:53]
