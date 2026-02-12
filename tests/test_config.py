@@ -32,3 +32,18 @@ def test_default_model_config_is_valid() -> None:
 def test_model_config_rejects_empty_hidden_sizes() -> None:
     with pytest.raises(ValueError, match="at least one layer"):
         ModelConfig(hidden_sizes=()).validate()
+
+
+def test_model_config_rejects_non_positive_hidden_sizes() -> None:
+    with pytest.raises(ValueError, match="hidden sizes must be positive"):
+        ModelConfig(hidden_sizes=(16, 0)).validate()
+
+
+def test_model_config_rejects_an_unknown_activation() -> None:
+    with pytest.raises(ValueError, match="unsupported activation"):
+        ModelConfig(activation="gelu").validate()
+
+
+def test_model_config_rejects_a_non_positive_learning_rate() -> None:
+    with pytest.raises(ValueError, match="learning_rate must be positive"):
+        ModelConfig(learning_rate=0.0).validate()

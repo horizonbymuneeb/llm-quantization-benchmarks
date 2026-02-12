@@ -266,3 +266,25 @@ def calibration_subset(
     take = min(n_samples, n)
     idx = rng.choice(n, size=take, replace=False)
     return dataset.x_train[idx], dataset.y_train[idx]
+
+
+def one_hot(labels: np.ndarray, n_classes: int) -> np.ndarray:
+    """One-hot encode integer labels; used by the cross-entropy loss."""
+    labels = np.asarray(labels, dtype=np.int64)
+    if labels.size and (labels.min() < 0 or labels.max() >= n_classes):
+        raise ValueError(f"labels must lie in [0, {n_classes})")
+    out = np.zeros((labels.size, n_classes), dtype=np.float32)
+    out[np.arange(labels.size), labels] = 1.0
+    return out
+
+
+def class_weights(labels: np.ndarray, n_classes: int) -> np.ndarray:
+    """Inverse-frequency weights, exposed so an imbalanced split can be trained.
+
+    The default generators are balanced, so this returns near-uniform weights;
+    it exists because a caller can pass a custom label vector.
+    """
+    counts = np.bincount(np.asarray(labels, dtype=np.int64), minlength=n_classes).astype(np.float64)
+    counts = np.maximum(counts, 1.0)
+    weights = counts.sum() / (n_classes * counts)
+    return weights.astype(np.float32)
