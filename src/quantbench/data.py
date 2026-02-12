@@ -180,3 +180,89 @@ def _pad_features(coords: np.ndarray, n_features: int, rng: np.random.Generator)
         0.0, 1.0, size=(coords.shape[0], n_features - coords.shape[1])
     )
     return np.concatenate([coords, extra], axis=1).astype(np.float32)
+
+
+def stratified_split(
+    x: np.ndarray,
+    y: np.ndarray,
+    test_fraction: float,
+    seed: int,
+) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+    """Split per class so every class appears in both halves.
+
+    A plain random split can leave a class with one or two test rows, and then
+    a single flipped prediction moves accuracy by tens of percent — which would
+    make the reported accuracy delta meaningless.
+    """
+    if not 0.0 < test_fraction < 1.0:
+        raise ValueError("test_fraction must lie strictly between 0 and 1")
+    rng = np.random.default_rng(seed)
+    classes = np.unique(y)
+    train_idx: list[np.ndarray] = []
+    test_idx: list[np.ndarray] = []
+    for cls in classes:
+        idx = np.flatnonzero(y == cls)
+        rng.shuffle(idx)
+        n_test = max(1, int(round(idx.size * test_fraction)))
+        n_test = min(n_test, idx.size - 1)
+        test_idx.append(idx[:n_test])
+        train_idx.append(idx[n_test:])
+    tr = np.concatenate(train_idx)
+    te = np.concatenate(test_idx)
+    rng.shuffle(tr)
+    rng.shuffle(te)
+    return x[tr], y[tr], x[te], y[te]
+
+
+def build_dataset(config: DataConfig) -> Dataset:
+    """Generate the full dataset described by ``config``."""
+    config.validate()
+    if config.generator == "clusters":
+        x, y = make_clusters(
+            config.n_samples,
+            config.n_features,
+            config.n_classes,
+            config.n_informative,
+            config.class_sep,
+            config.noise,
+            config.seed,
+        )
+    elif config.generator == "moons":
+        x, y = make_moons(
+            config.n_samples, config.n_features, config.n_classes, config.noise, config.seed
+        )
+    elif config.generator == "ring":
+        x, y = make_rings(
+            config.n_samples, config.n_features, config.n_classes, config.noise, config.seed
+        )
+    else:
+        raise ValueError(f"unknown generator {config.generator!r}")
+
+    x_tr, y_tr, x_te, y_te = stratified_split(x, y, config.test_fraction, config.seed + 1)
+    return Dataset(
+        x_train=x_tr,
+        y_train=y_tr,
+        x_test=x_te,
+        y_test=y_te,
+        n_classes=config.n_classes,
+        n_features=config.n_features,
+        generator=config.generator,
+    )
+
+
+def calibration_subset(
+    dataset: Dataset, n_samples: int, seed: int
+) -> tuple[np.ndarray, np.ndarray]:
+    """Draw a calibration split from the *training* rows.
+
+    Calibration must not see test data: the test set is the measurement, and
+    calibrating on it would leak the distribution being measured.  Sampling
+    from train keeps the reported numbers honest.
+    """
+    if n_samples < 1:
+        raise ValueError("n_samples must be positive")
+    rng = np.random.default_rng(seed)
+    n = dataset.n_train
+    take = min(n_samples, n)
+    idx = rng.choice(n, size=take, replace=False)
+    return dataset.x_train[idx], dataset.y_train[idx]
