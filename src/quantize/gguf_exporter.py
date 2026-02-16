@@ -288,3 +288,5 @@ if __name__ == '__main__':
 # Implement GPTQ quantization alternative [2026-02-12T10:21:53]
 
 # Update README with benchmarking results [2026-02-16T20:29:33]
+
+# Validate models on Wikitext dataset [2026-02-16T16:56:00]

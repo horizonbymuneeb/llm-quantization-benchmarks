@@ -136,3 +136,4 @@
 [2026-02-12T10:21:53] Implement GPTQ quantization alternative
 [2026-02-12T17:34:10] Optimize AWQ calibration loop for better accuracy
 [2026-02-16T20:29:33] Update README with benchmarking results
+[2026-02-16T16:56:00] Validate models on Wikitext dataset
