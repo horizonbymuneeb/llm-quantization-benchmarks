@@ -286,3 +286,5 @@ if __name__ == '__main__':
 # Profile memory bandwidth vs compute bottlenecks [2026-02-12T17:04:50]
 
 # Implement GPTQ quantization alternative [2026-02-12T10:21:53]
+
+# Update README with benchmarking results [2026-02-16T20:29:33]

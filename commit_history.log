@@ -135,3 +135,4 @@
 [2026-02-12T12:41:44] Implement dynamic bit-width selection
 [2026-02-12T10:21:53] Implement GPTQ quantization alternative
 [2026-02-12T17:34:10] Optimize AWQ calibration loop for better accuracy
+[2026-02-16T20:29:33] Update README with benchmarking results
