@@ -79,3 +79,18 @@ def test_data_config_rejects_a_degenerate_test_fraction() -> None:
 def test_calibration_config_rejects_an_unknown_method() -> None:
     with pytest.raises(ValueError, match="calibration method must be one of"):
         CalibrationConfig(method="histogram").validate()
+
+
+def test_calibration_config_rejects_a_bad_percentile() -> None:
+    with pytest.raises(ValueError, match="percentile must lie"):
+        CalibrationConfig(percentile=100.0).validate()
+
+
+def test_calibration_config_rejects_too_few_bins() -> None:
+    with pytest.raises(ValueError, match="n_bins must be at least"):
+        CalibrationConfig(n_bins=8).validate()
+
+
+def test_quant_config_label_is_stable() -> None:
+    point = QuantConfig(format=NumericFormat.INT4, scheme="asymmetric", granularity="per_channel")
+    assert point.label == "int4-asymmetric-per_channel"

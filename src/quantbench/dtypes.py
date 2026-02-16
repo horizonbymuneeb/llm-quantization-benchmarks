@@ -94,3 +94,24 @@ class FormatSpec:
             half = self.fmt.bits - 1
             return (-(1 << half), (1 << half) - 1)
         return (0, (1 << self.fmt.bits) - 1)
+
+
+FORMAT_SPECS: dict[NumericFormat, FormatSpec] = {
+    NumericFormat.FP32: FormatSpec(NumericFormat.FP32, 8, 23, True),
+    NumericFormat.FP16: FormatSpec(NumericFormat.FP16, 5, 10, True),
+    NumericFormat.BF16: FormatSpec(NumericFormat.BF16, 8, 7, True),
+    NumericFormat.INT8: FormatSpec(NumericFormat.INT8, 0, 7, True),
+    NumericFormat.INT4: FormatSpec(NumericFormat.INT4, 0, 3, True),
+}
+
+
+def format_spec(fmt: NumericFormat) -> FormatSpec:
+    """Return the static :class:`FormatSpec` for a format enum member."""
+    return FORMAT_SPECS[fmt]
+
+
+def _round_to_even_shift(mantissa_dropped: int) -> int:
+    """Round-to-nearest-even for a dropped bit pattern of ``mantissa_dropped``."""
+    if mantissa_dropped == 0:
+        return 0
+    return 1 if mantissa_dropped > 1 else 0
