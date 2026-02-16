@@ -115,3 +115,38 @@ def _round_to_even_shift(mantissa_dropped: int) -> int:
     if mantissa_dropped == 0:
         return 0
     return 1 if mantissa_dropped > 1 else 0
+
+
+def cast_bf16(values: np.ndarray) -> np.ndarray:
+    """Round an array to BF16 precision and return it as float32.
+
+    BF16 keeps the FP32 exponent and truncates the mantissa from 23 to 7 bits.
+    Naive truncation biases every value toward zero, which compounds over many
+    layers, so the low 16 bits are rounded to nearest with ties to even before
+    being masked off.
+    """
+    arr = np.asarray(values, dtype=np.float32)
+    bits = arr.view(np.uint32).astype(np.uint64)
+    # A tie is exactly 0x8000 in the discarded half: bump only when the
+    # retained part is odd, which is the round-half-to-even rule.
+    low = bits & np.uint64(0xFFFF)
+    retained = bits & np.uint64(0xFFFF0000)
+    tie = low == np.uint64(0x8000)
+    odd = (retained >> np.uint64(16)) & np.uint64(1)
+    bump = (low > np.uint64(0x8000)) | (tie & (odd == np.uint64(1)))
+    rounded = retained + np.where(bump, np.uint64(0x10000), np.uint64(0))
+    rounded = np.minimum(rounded, np.uint64(0xFFFF0000))
+    return rounded.astype(np.uint32).view(np.float32).astype(np.float32)
+
+
+def cast_fp16(values: np.ndarray) -> np.ndarray:
+    """Round an array through IEEE-754 binary16 and back to float32.
+
+    Values beyond binary16's range (about 65504) saturate to infinity.  That is
+    correct IEEE behaviour and the caller may well be measuring it, so the cast
+    overflow warning is suppressed here rather than escalated.
+    """
+    arr = np.asarray(values, dtype=np.float32)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        return arr.astype(np.float16).astype(np.float32)

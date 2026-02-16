@@ -94,3 +94,18 @@ def test_calibration_config_rejects_too_few_bins() -> None:
 def test_quant_config_label_is_stable() -> None:
     point = QuantConfig(format=NumericFormat.INT4, scheme="asymmetric", granularity="per_channel")
     assert point.label == "int4-asymmetric-per_channel"
+
+
+def test_quant_config_rejects_an_unknown_scheme() -> None:
+    with pytest.raises(ValueError, match="scheme must be symmetric or asymmetric"):
+        QuantConfig(scheme="log").validate()
+
+
+def test_quant_config_rejects_asymmetric_on_a_float_format() -> None:
+    with pytest.raises(ValueError, match="requires an integer format"):
+        QuantConfig(format=NumericFormat.BF16, scheme="asymmetric").validate()
+
+
+def test_quant_config_rejects_an_unknown_round_mode() -> None:
+    with pytest.raises(ValueError, match="unknown round_mode"):
+        QuantConfig(round_mode="floor").validate()
