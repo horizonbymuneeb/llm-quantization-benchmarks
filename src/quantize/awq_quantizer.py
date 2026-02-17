@@ -421,3 +421,5 @@ if __name__ == '__main__':
 # Implement dynamic bit-width selection [2026-02-12T12:41:44]
 
 # Optimize AWQ calibration loop for better accuracy [2026-02-12T17:34:10]
+
+# Add unit tests for int4 packing utils [2026-02-17T16:20:43]
