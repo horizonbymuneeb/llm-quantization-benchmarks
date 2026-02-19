@@ -109,3 +109,30 @@ def test_quant_config_rejects_asymmetric_on_a_float_format() -> None:
 def test_quant_config_rejects_an_unknown_round_mode() -> None:
     with pytest.raises(ValueError, match="unknown round_mode"):
         QuantConfig(round_mode="floor").validate()
+
+
+def test_quant_grid_expands_integer_formats_only() -> None:
+    config = SweepConfig(
+        formats=(NumericFormat.BF16, NumericFormat.INT8),
+        schemes=("symmetric", "asymmetric"),
+        granularities=("per_tensor", "per_channel"),
+    )
+    grid = config.quant_grid()
+    # BF16 contributes exactly one point; INT8 contributes 2 schemes x 2 granularities.
+    assert len(grid) == 5
+    assert sum(1 for p in grid if p.format is NumericFormat.BF16) == 1
+    assert sum(1 for p in grid if p.format is NumericFormat.INT8) == 4
+
+
+def test_quant_grid_of_the_default_config_is_ten_points() -> None:
+    config = SweepConfig()
+    assert len(config.quant_grid()) == 10
+
+
+def test_sweep_config_validate_checks_the_matrix() -> None:
+    with pytest.raises(ValueError, match="at least one numeric format"):
+        SweepConfig(formats=()).validate()
+    with pytest.raises(ValueError, match="at least one scheme"):
+        SweepConfig(schemes=()).validate()
+    with pytest.raises(ValueError, match="sensitivity_top_k must be positive"):
+        SweepConfig(sensitivity_top_k=0).validate()

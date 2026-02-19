@@ -150,3 +150,53 @@ def cast_fp16(values: np.ndarray) -> np.ndarray:
     with warnings.catch_warnings():
         warnings.simplefilter("ignore", RuntimeWarning)
         return arr.astype(np.float16).astype(np.float32)
+
+
+def cast_fp32(values: np.ndarray) -> np.ndarray:
+    """Identity cast; kept so every format has a uniform entry point."""
+    return np.asarray(values, dtype=np.float32).copy()
+
+
+def quantize_to_grid(
+    values: np.ndarray,
+    fmt: NumericFormat,
+    scale: float,
+    zero_point: int = 0,
+    round_mode: str = "nearest",
+) -> np.ndarray:
+    """Snap float values onto an integer grid, returning *dequantised* floats.
+
+    This is the arithmetic that a real INT8/INT4 kernel performs: divide by the
+    scale, round to the nearest representable integer, clamp to the format
+    range, then multiply the scale back.  The returned array is float32 so the
+    rest of the model can keep running; the *information loss* is what we
+    measure, not the storage saving.
+    """
+    if scale <= 0:
+        raise ValueError(f"scale must be positive, got {scale!r}")
+    if round_mode not in ("nearest", "truncate"):
+        raise ValueError(f"unknown round_mode {round_mode!r}")
+    spec = FORMAT_SPECS[fmt]
+    low, high = spec.integer_range
+    arr = np.asarray(values, dtype=np.float32)
+    scaled = arr / np.float32(scale)
+    # ``nearest`` is numpy's rint, i.e. round-half-to-even.  Ties therefore go
+    # to the even code, which is what IEEE-754 and most int8 kernels do; it is
+    # not the same as "round half away from zero".
+    rounded = np.rint(scaled) if round_mode == "nearest" else np.trunc(scaled)
+    codes = rounded.astype(np.int32) + int(zero_point)
+    codes = np.clip(codes, low, high)
+    return (codes.astype(np.float32) - np.float32(zero_point)) * np.float32(scale)
+
+
+def storage_bytes(shape: tuple[int, ...], fmt: NumericFormat) -> int:
+    """Bytes needed to store a tensor of ``shape`` in ``fmt``.
+
+    INT4 packs two values per byte, so the byte count is half the element
+    count rounded up.  BF16/FP16 are two bytes.  This is the only place the
+    benchmark converts bits into bytes, so compression ratios stay consistent.
+    """
+    n = int(np.prod(shape)) if shape else 1
+    if fmt is NumericFormat.INT4:
+        return (n + 1) // 2
+    return n * (fmt.bits // 8)
