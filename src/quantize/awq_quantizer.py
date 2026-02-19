@@ -423,3 +423,5 @@ if __name__ == '__main__':
 # Optimize AWQ calibration loop for better accuracy [2026-02-12T17:34:10]
 
 # Add unit tests for int4 packing utils [2026-02-17T16:20:43]
+
+# Fix race condition in parallel calibration [2026-02-19T19:51:35]
