@@ -140,3 +140,4 @@
 [2026-02-17T16:20:43] Add unit tests for int4 packing utils
 [2026-02-19T19:51:35] Fix race condition in parallel calibration
 [2026-02-20T20:39:19] Implement dynamic bit-width selection
+[2026-02-20T15:36:34] Add support for 3-bit quantization

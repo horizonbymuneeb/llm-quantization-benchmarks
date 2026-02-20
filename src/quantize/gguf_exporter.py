@@ -290,3 +290,5 @@ if __name__ == '__main__':
 # Update README with benchmarking results [2026-02-16T20:29:33]
 
 # Validate models on Wikitext dataset [2026-02-16T16:56:00]
+
+# Add support for 3-bit quantization [2026-02-20T15:36:34]
