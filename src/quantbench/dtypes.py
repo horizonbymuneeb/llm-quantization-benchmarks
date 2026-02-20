@@ -200,3 +200,43 @@ def storage_bytes(shape: tuple[int, ...], fmt: NumericFormat) -> int:
     if fmt is NumericFormat.INT4:
         return (n + 1) // 2
     return n * (fmt.bits // 8)
+
+
+def compression_ratio(shape: tuple[int, ...], fmt: NumericFormat) -> float:
+    """FP32 bytes divided by ``fmt`` bytes for the same tensor shape."""
+    base = storage_bytes(shape, NumericFormat.FP32)
+    return base / storage_bytes(shape, fmt)
+
+
+def quant_error_stats(reference: np.ndarray, candidate: np.ndarray) -> dict[str, float]:
+    """Summarise the difference between two tensors.
+
+    Reported alongside every run because two formats can have identical mean
+    absolute error while differing completely in their worst case, and the
+    worst case is what breaks a downstream layer.
+    """
+    ref = np.asarray(reference, dtype=np.float64)
+    cand = np.asarray(candidate, dtype=np.float64)
+    if ref.shape != cand.shape:
+        raise ValueError(f"shape mismatch: {ref.shape} vs {cand.shape}")
+    diff = cand - ref
+    abs_diff = np.abs(diff)
+    denom = float(np.mean(np.abs(ref))) or 1.0
+    return {
+        "max_abs": float(abs_diff.max()) if abs_diff.size else 0.0,
+        "mean_abs": float(abs_diff.mean()) if abs_diff.size else 0.0,
+        "rmse": float(np.sqrt(np.mean(diff**2))) if diff.size else 0.0,
+        "relative_mean_abs": float(abs_diff.mean() / denom) if abs_diff.size else 0.0,
+        "snr_db": _snr_db(ref, diff),
+    }
+
+
+def _snr_db(reference: np.ndarray, noise: np.ndarray) -> float:
+    """Signal-to-noise ratio in dB, guarding against a zero-noise tensor."""
+    signal = float(np.sum(reference**2))
+    noise_power = float(np.sum(noise**2))
+    if noise_power <= 0.0:
+        return float("inf")
+    if signal <= 0.0:
+        return float("-inf")
+    return float(10.0 * np.log10(signal / noise_power))
