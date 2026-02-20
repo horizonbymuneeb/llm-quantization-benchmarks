@@ -172,3 +172,29 @@ def test_load_config_parses_a_minimal_file(tmp_path: Path) -> None:
     assert config.model.hidden_sizes == (8,)
     assert config.model.epochs == 2
     assert config.data.n_samples == 40
+
+
+def test_load_config_rejects_an_unknown_key(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        """
+        model:
+          hidden_sizes: [8]
+          learning_rat: 0.1
+        """,
+    )
+    with pytest.raises(ValueError, match="unknown keys for ModelConfig"):
+        load_config(path)
+
+
+def test_load_config_rejects_an_unknown_format_name(tmp_path: Path) -> None:
+    path = _write(tmp_path, "formats: [int3]\n")
+    with pytest.raises(ValueError, match="unknown numeric format"):
+        load_config(path)
+
+
+def test_load_config_rejects_a_non_mapping_root(tmp_path: Path) -> None:
+    path = tmp_path / "config.yaml"
+    path.write_text("- a list, not a mapping\n", encoding="utf-8")
+    with pytest.raises(ValueError, match="config root must be a mapping"):
+        load_config(path)
