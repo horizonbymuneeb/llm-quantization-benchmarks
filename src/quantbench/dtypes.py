@@ -240,3 +240,26 @@ def _snr_db(reference: np.ndarray, noise: np.ndarray) -> float:
     if signal <= 0.0:
         return float("-inf")
     return float(10.0 * np.log10(signal / noise_power))
+
+
+def simulate_format(values: np.ndarray, fmt: NumericFormat) -> np.ndarray:
+    """Round-trip ``values`` through ``fmt`` using a per-tensor symmetric scale.
+
+    Float formats only lose mantissa bits; integer formats additionally need a
+    scale.  This helper is the "what does this format cost by itself" probe
+    used by the sensitivity module, where the quantisation *scheme* is held
+    fixed and only the storage width changes.
+    """
+    arr = np.asarray(values, dtype=np.float32)
+    if fmt is NumericFormat.FP32:
+        return cast_fp32(arr)
+    if fmt is NumericFormat.FP16:
+        return cast_fp16(arr)
+    if fmt is NumericFormat.BF16:
+        return cast_bf16(arr)
+    low, high = FORMAT_SPECS[fmt].integer_range
+    amax = float(np.max(np.abs(arr))) if arr.size else 0.0
+    if amax == 0.0:
+        return arr.copy()
+    scale = amax / float(high)
+    return quantize_to_grid(arr, fmt, scale)

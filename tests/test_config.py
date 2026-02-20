@@ -136,3 +136,39 @@ def test_sweep_config_validate_checks_the_matrix() -> None:
         SweepConfig(schemes=()).validate()
     with pytest.raises(ValueError, match="sensitivity_top_k must be positive"):
         SweepConfig(sensitivity_top_k=0).validate()
+
+
+def test_load_config_reads_the_shipped_file() -> None:
+    config = load_config(Path(__file__).resolve().parents[1] / "config.yaml")
+    assert config.model.hidden_sizes == (64, 32)
+    assert NumericFormat.INT4 in config.formats
+    assert config.calibration.method == "entropy"
+
+
+def test_load_config_missing_file_is_an_error(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError, match="config file not found"):
+        load_config(tmp_path / "nope.yaml")
+
+
+def test_load_config_parses_a_minimal_file(tmp_path: Path) -> None:
+    path = _write(
+        tmp_path,
+        """
+        formats: [int8]
+        schemes: [symmetric]
+        granularities: [per_tensor]
+        model:
+          hidden_sizes: [8]
+          epochs: 2
+        data:
+          n_samples: 40
+          n_features: 4
+          n_classes: 2
+          n_informative: 3
+        """,
+    )
+    config = load_config(path)
+    assert config.formats == (NumericFormat.INT8,)
+    assert config.model.hidden_sizes == (8,)
+    assert config.model.epochs == 2
+    assert config.data.n_samples == 40
