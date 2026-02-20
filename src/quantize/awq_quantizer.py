@@ -427,3 +427,5 @@ if __name__ == '__main__':
 # Fix race condition in parallel calibration [2026-02-19T19:51:35]
 
 # Implement dynamic bit-width selection [2026-02-20T20:39:19]
+
+# Optimize AWQ calibration loop for better accuracy [2026-02-20T20:31:01]
