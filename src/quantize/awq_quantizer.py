@@ -425,3 +425,5 @@ if __name__ == '__main__':
 # Add unit tests for int4 packing utils [2026-02-17T16:20:43]
 
 # Fix race condition in parallel calibration [2026-02-19T19:51:35]
+
+# Implement dynamic bit-width selection [2026-02-20T20:39:19]
