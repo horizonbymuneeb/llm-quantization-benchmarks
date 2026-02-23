@@ -198,3 +198,23 @@ def test_load_config_rejects_a_non_mapping_root(tmp_path: Path) -> None:
     path.write_text("- a list, not a mapping\n", encoding="utf-8")
     with pytest.raises(ValueError, match="config root must be a mapping"):
         load_config(path)
+
+
+def test_load_config_validates_the_loaded_values(tmp_path: Path) -> None:
+    path = _write(tmp_path, "model:\n  learning_rate: -1.0\n")
+    with pytest.raises(ValueError, match="learning_rate must be positive"):
+        load_config(path)
+
+
+def test_config_to_dict_serialises_enums_and_tuples() -> None:
+    payload = config_to_dict(SweepConfig())
+    assert payload["formats"] == ["fp32", "bf16", "int8", "int4"]
+    assert payload["model"]["hidden_sizes"] == [64, 32]
+    assert isinstance(payload["schemes"], list)
+    assert payload["calibration"]["method"] == "entropy"
+
+
+def test_config_to_dict_is_json_serialisable() -> None:
+    import json
+
+    json.dumps(config_to_dict(SweepConfig()))

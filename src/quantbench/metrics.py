@@ -79,3 +79,51 @@ def accuracy_from_probs(probabilities: np.ndarray, labels: np.ndarray) -> float:
     if labels.size == 0:
         raise ValueError("cannot score an empty batch")
     return float(np.mean(np.argmax(probs, axis=1) == labels))
+
+
+def per_class_accuracy(probabilities: np.ndarray, labels: np.ndarray, n_classes: int) -> dict[str, float]:
+    """Accuracy within each class, with ``nan`` for classes absent from the split."""
+    labels = np.asarray(labels, dtype=np.int64)
+    preds = np.argmax(np.asarray(probabilities), axis=1)
+    out: dict[str, float] = {}
+    for cls in range(n_classes):
+        mask = labels == cls
+        if not np.any(mask):
+            out[f"class_{cls}"] = float("nan")
+        else:
+            out[f"class_{cls}"] = float(np.mean(preds[mask] == labels[mask]))
+    return out
+
+
+def confusion_matrix(predictions: np.ndarray, labels: np.ndarray, n_classes: int) -> np.ndarray:
+    """Rows are true classes, columns are predicted classes."""
+    labels = np.asarray(labels, dtype=np.int64)
+    predictions = np.asarray(predictions, dtype=np.int64)
+    if labels.shape != predictions.shape:
+        raise ValueError("labels and predictions must have the same shape")
+    matrix = np.zeros((n_classes, n_classes), dtype=np.int64)
+    np.add.at(matrix, (labels, predictions), 1)
+    return matrix
+
+
+def accuracy_delta(
+    reference_probs: np.ndarray,
+    candidate_probs: np.ndarray,
+    labels: np.ndarray,
+) -> dict[str, float]:
+    """Absolute and relative accuracy change from reference to candidate.
+
+    The sign convention is ``candidate - reference``, so a negative delta is a
+    regression.  ``relative`` is guarded: when reference accuracy is zero there
+    is no meaningful ratio and the field is reported as ``nan``.
+    """
+    ref_acc = accuracy_from_probs(reference_probs, labels)
+    cand_acc = accuracy_from_probs(candidate_probs, labels)
+    delta = cand_acc - ref_acc
+    relative = float(delta / ref_acc) if ref_acc > 0 else float("nan")
+    return {
+        "reference_accuracy": ref_acc,
+        "candidate_accuracy": cand_acc,
+        "accuracy_delta": delta,
+        "relative_delta": relative,
+    }
