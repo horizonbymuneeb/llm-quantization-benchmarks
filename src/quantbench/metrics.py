@@ -127,3 +127,62 @@ def accuracy_delta(
         "accuracy_delta": delta,
         "relative_delta": relative,
     }
+
+
+def decision_churn(record: PredictionRecord) -> dict[str, float]:
+    """Per-input prediction changes between reference and candidate.
+
+    The headline number is ``churn_rate``: the fraction of inputs whose argmax
+    moved.  It is *not* the same as the accuracy delta.  A model can flip one
+    input from correct to wrong and another from wrong to correct: churn 2/1000
+    with an accuracy delta of exactly zero.  That is the case this metric exists
+    to expose.
+
+    ``net_flips`` counts flips that changed correctness (signed), while
+    ``flip_rate`` counts all flips regardless of whether correctness changed.
+    """
+    ref_pred = record.reference_pred
+    cand_pred = record.candidate_pred
+    labels = record.labels
+    n = record.n_samples
+
+    flips = ref_pred != cand_pred
+    ref_correct = ref_pred == labels
+    cand_correct = cand_pred == labels
+    gained = int(np.sum(~ref_correct & cand_correct))
+    lost = int(np.sum(ref_correct & ~cand_correct))
+    # Flips that do not change correctness: both wrong, but differently wrong.
+    lateral = int(np.sum(~ref_correct & ~cand_correct & flips))
+
+    return {
+        "n_samples": float(n),
+        "flip_count": float(np.sum(flips)),
+        "flip_rate": float(np.mean(flips)),
+        "gained": float(gained),
+        "lost": float(lost),
+        "lateral": float(lateral),
+        "net_flips": float(gained - lost),
+        "accuracy_delta": float((cand_correct.sum() - ref_correct.sum()) / n),
+        "agreement_rate": float(np.mean(~flips)),
+    }
+
+
+def confidence_delta(record: PredictionRecord) -> dict[str, float]:
+    """Change in top-1 confidence, including on the inputs that flipped.
+
+    ``mean_abs`` over all rows is reported next to the mean over flipped rows
+    only, because a small average change can hide a large change on exactly the
+    inputs that crossed the decision boundary.
+    """
+    ref_conf = record.reference_confidence
+    cand_conf = record.candidate_confidence
+    diff = cand_conf - ref_conf
+    flips = record.reference_pred != record.candidate_pred
+    flipped_diff = diff[flips]
+    return {
+        "mean_delta": float(np.mean(diff)),
+        "mean_abs_delta": float(np.mean(np.abs(diff))),
+        "max_abs_delta": float(np.max(np.abs(diff))),
+        "flipped_mean_abs_delta": float(np.mean(np.abs(flipped_diff))) if flips.any() else 0.0,
+        "n_flipped": float(np.sum(flips)),
+    }
