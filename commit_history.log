@@ -143,3 +143,4 @@
 [2026-02-20T15:36:34] Add support for 3-bit quantization
 [2026-02-20T20:31:01] Optimize AWQ calibration loop for better accuracy
 [2026-02-23T10:15:58] Add support for 3-bit quantization
+[2026-02-27T10:16:32] Fix INT4 overflow in weight quantization

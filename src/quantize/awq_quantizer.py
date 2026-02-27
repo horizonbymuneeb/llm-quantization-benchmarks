@@ -429,3 +429,5 @@ if __name__ == '__main__':
 # Implement dynamic bit-width selection [2026-02-20T20:39:19]
 
 # Optimize AWQ calibration loop for better accuracy [2026-02-20T20:31:01]
+
+# Fix INT4 overflow in weight quantization [2026-02-27T10:16:32]
