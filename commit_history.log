@@ -145,3 +145,4 @@
 [2026-02-23T10:15:58] Add support for 3-bit quantization
 [2026-02-27T10:16:32] Fix INT4 overflow in weight quantization
 [2026-03-02T10:51:50] Optimize AWQ calibration loop for better accuracy
+[2026-03-02T10:24:19] Add benchmarking for Mistral models

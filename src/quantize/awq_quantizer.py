@@ -433,3 +433,5 @@ if __name__ == '__main__':
 # Fix INT4 overflow in weight quantization [2026-02-27T10:16:32]
 
 # Optimize AWQ calibration loop for better accuracy [2026-03-02T10:51:50]
+
+# Add benchmarking for Mistral models [2026-03-02T10:24:19]
