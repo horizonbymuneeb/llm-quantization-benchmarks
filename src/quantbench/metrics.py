@@ -186,3 +186,48 @@ def confidence_delta(record: PredictionRecord) -> dict[str, float]:
         "flipped_mean_abs_delta": float(np.mean(np.abs(flipped_diff))) if flips.any() else 0.0,
         "n_flipped": float(np.sum(flips)),
     }
+
+
+def margin(probabilities: np.ndarray) -> np.ndarray:
+    """Top-1 minus top-2 probability per row.
+
+    A small margin means the row sits near the decision boundary, which is where
+    quantisation noise is most likely to flip it.  Returns an all-zero array for
+    a single-class problem.
+    """
+    probs = np.asarray(probabilities, dtype=np.float64)
+    if probs.shape[1] < 2:
+        return np.zeros(probs.shape[0], dtype=np.float64)
+    part = np.partition(probs, -2, axis=1)
+    return part[:, -1] - part[:, -2]
+
+
+def margin_shift(record: PredictionRecord) -> dict[str, float]:
+    """How much the decision margin shrank or grew under compression."""
+    ref_margin = margin(record.reference_probs)
+    cand_margin = margin(record.candidate_probs)
+    diff = cand_margin - ref_margin
+    return {
+        "reference_mean": float(np.mean(ref_margin)),
+        "candidate_mean": float(np.mean(cand_margin)),
+        "mean_delta": float(np.mean(diff)),
+        "max_shrinkage": float(np.min(diff)),
+        "n_below_zero": float(np.sum(cand_margin <= 0.0)),
+    }
+
+
+def _rank_average(values: np.ndarray) -> np.ndarray:
+    """Average ranks, 1-based, with ties receiving the mean of their span."""
+    arr = np.asarray(values, dtype=np.float64)
+    order = np.argsort(arr, kind="mergesort")
+    ranks = np.empty(arr.size, dtype=np.float64)
+    ranks[order] = np.arange(1, arr.size + 1, dtype=np.float64)
+    # Average ranks within runs of equal values.
+    sorted_vals = arr[order]
+    start = 0
+    for i in range(1, arr.size + 1):
+        if i == arr.size or sorted_vals[i] != sorted_vals[start]:
+            if i - start > 1:
+                ranks[order[start:i]] = np.mean(ranks[order[start:i]])
+            start = i
+    return ranks
