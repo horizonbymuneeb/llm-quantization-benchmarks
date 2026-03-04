@@ -231,3 +231,59 @@ def _rank_average(values: np.ndarray) -> np.ndarray:
                 ranks[order[start:i]] = np.mean(ranks[order[start:i]])
             start = i
     return ranks
+
+
+def spearman_correlation(a: np.ndarray, b: np.ndarray) -> float:
+    """Spearman rank correlation with tie-averaged ranks.
+
+    Implemented directly rather than imported so the tie handling is explicit
+    and testable: ties are common here because quantised confidences repeat.
+    """
+    x = np.asarray(a, dtype=np.float64).ravel()
+    y = np.asarray(b, dtype=np.float64).ravel()
+    if x.size != y.size:
+        raise ValueError(f"length mismatch: {x.size} vs {y.size}")
+    if x.size < 2:
+        return float("nan")
+    rx = _rank_average(x)
+    ry = _rank_average(y)
+    rx -= rx.mean()
+    ry -= ry.mean()
+    denom = float(np.sqrt(np.sum(rx**2) * np.sum(ry**2)))
+    if denom == 0.0:
+        # One side is constant: correlation is undefined, not zero.
+        return float("nan")
+    return float(np.sum(rx * ry) / denom)
+
+
+def kendall_tau(a: np.ndarray, b: np.ndarray) -> float:
+    """Kendall tau-b, handling tied pairs.
+
+    O(n^2) is fine for the test splits used here and avoids a scipy round trip
+    inside the metric loop.  tau-b divides by the geometric mean of the
+    non-tied pair counts, so heavy tie blocks (INT4 confidences) do not produce
+    a misleadingly small correlation.
+    """
+    x = np.asarray(a, dtype=np.float64).ravel()
+    y = np.asarray(b, dtype=np.float64).ravel()
+    if x.size != y.size:
+        raise ValueError(f"length mismatch: {x.size} vs {y.size}")
+    n = x.size
+    if n < 2:
+        return float("nan")
+    concordant = 0
+    discordant = 0
+    tie_x = 0
+    tie_y = 0
+    for i in range(n - 1):
+        dx = x[i + 1 :] - x[i]
+        dy = y[i + 1 :] - y[i]
+        prod = dx * dy
+        concordant += int(np.sum(prod > 0))
+        discordant += int(np.sum(prod < 0))
+        tie_x += int(np.sum((dx == 0) & (dy != 0)))
+        tie_y += int(np.sum((dy == 0) & (dx != 0)))
+    denom = np.sqrt((concordant + discordant + tie_x) * (concordant + discordant + tie_y))
+    if denom == 0:
+        return float("nan")
+    return float((concordant - discordant) / denom)
