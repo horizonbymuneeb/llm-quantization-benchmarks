@@ -287,3 +287,99 @@ def kendall_tau(a: np.ndarray, b: np.ndarray) -> float:
     if denom == 0:
         return float("nan")
     return float((concordant - discordant) / denom)
+
+
+def confidence_rank_agreement(record: PredictionRecord) -> dict[str, float]:
+    """Rank correlation of confidence orderings between the two models.
+
+    Both global (across all rows) and per-class correlations are reported.  The
+    global number is dominated by the easy majority of the data; the per-class
+    numbers show whether a specific class's confidence ordering collapsed.
+    """
+    ref_conf = record.reference_confidence
+    cand_conf = record.candidate_confidence
+    out = {
+        "spearman_global": spearman_correlation(ref_conf, cand_conf),
+        "kendall_global": kendall_tau(ref_conf, cand_conf),
+        "spearman_argmax_agreement": float(
+            np.mean(record.reference_pred == record.candidate_pred)
+        ),
+    }
+    n_classes = record.reference_probs.shape[1]
+    per_class: list[float] = []
+    for cls in range(n_classes):
+        mask = record.labels == cls
+        if int(mask.sum()) < 3:
+            continue
+        value = spearman_correlation(ref_conf[mask], cand_conf[mask])
+        if not np.isnan(value):
+            per_class.append(value)
+    out["spearman_class_mean"] = float(np.mean(per_class)) if per_class else float("nan")
+    out["spearman_class_min"] = float(np.min(per_class)) if per_class else float("nan")
+    return out
+
+
+def expected_calibration_error(
+    probabilities: np.ndarray,
+    labels: np.ndarray,
+    n_bins: int = 10,
+) -> float:
+    """Standard binned ECE of the top-1 confidence.
+
+    Included because quantisation often makes a model *more* confidently wrong:
+    the grid clips logits into fewer distinct values, so the confidence
+    histogram changes shape even when accuracy does not.
+    """
+    if n_bins < 1:
+        raise ValueError("n_bins must be positive")
+    probs = np.asarray(probabilities, dtype=np.float64)
+    labels = np.asarray(labels, dtype=np.int64)
+    conf = np.max(probs, axis=1)
+    pred = np.argmax(probs, axis=1)
+    correct = (pred == labels).astype(np.float64)
+    edges = np.linspace(0.0, 1.0, n_bins + 1)
+    ece = 0.0
+    n = labels.size
+    for i in range(n_bins):
+        lo, hi = edges[i], edges[i + 1]
+        mask = (conf > lo) & (conf <= hi) if i > 0 else (conf >= lo) & (conf <= hi)
+        if not np.any(mask):
+            continue
+        bin_conf = float(np.mean(conf[mask]))
+        bin_acc = float(np.mean(correct[mask]))
+        ece += abs(bin_conf - bin_acc) * (float(np.sum(mask)) / n)
+    return float(ece)
+
+
+def compare_predictions(
+    reference_probs: np.ndarray,
+    candidate_probs: np.ndarray,
+    labels: np.ndarray,
+    n_classes: int | None = None,
+) -> dict[str, object]:
+    """All behavioural metrics for one reference/candidate pair.
+
+    This is the single function the sweep calls per configuration; keeping the
+    assembly here means a report row is always the same set of keys.
+    """
+    record = PredictionRecord(reference_probs, candidate_probs, labels)
+    n_cls = n_classes or int(np.asarray(reference_probs).shape[1])
+    return {
+        "accuracy": accuracy_delta(reference_probs, candidate_probs, labels),
+        "churn": decision_churn(record),
+        "confidence": confidence_delta(record),
+        "margin": margin_shift(record),
+        "rank": confidence_rank_agreement(record),
+        "calibration_error": {
+            "reference_ece": expected_calibration_error(reference_probs, labels),
+            "candidate_ece": expected_calibration_error(candidate_probs, labels),
+        },
+        "per_class_reference": per_class_accuracy(reference_probs, labels, n_cls),
+        "per_class_candidate": per_class_accuracy(candidate_probs, labels, n_cls),
+        "confusion_reference": confusion_matrix(
+            record.reference_pred, labels, n_cls
+        ).tolist(),
+        "confusion_candidate": confusion_matrix(
+            record.candidate_pred, labels, n_cls
+        ).tolist(),
+    }
