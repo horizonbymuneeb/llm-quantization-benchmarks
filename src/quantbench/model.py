@@ -1,0 +1,60 @@
+"""A small multi-layer perceptron written in numpy.
+
+The model exists so the benchmark has something with real layers to compress.
+It is deliberately small and fully in numpy: no GPU, no framework version
+pinning, and — most usefully — every weight matrix is reachable by name, which
+is what per-layer sensitivity analysis needs.
+
+Training uses Adam with cross-entropy loss.  Weights are stored in a
+:class:`MLPParams` object rather than on the model, so a quantised copy of the
+weights can be swapped in without cloning the model or mutating it.
+"""
+
+from __future__ import annotations
+
+from dataclasses import dataclass, field
+
+import numpy as np
+
+from .config import ModelConfig
+
+
+@dataclass
+class MLPParams:
+    """Weights and biases, one matrix per linear layer.
+
+    ``weights[i]`` has shape ``(out_features, in_features)`` and
+    ``biases[i]`` has shape ``(out_features,)``.  Row-major with output units
+    first is the layout the per-channel quantiser assumes.
+    """
+
+    weights: list[np.ndarray]
+    biases: list[np.ndarray]
+
+    @property
+    def n_layers(self) -> int:
+        """Number of linear layers."""
+        return len(self.weights)
+
+    def copy(self) -> "MLPParams":
+        """Deep copy, so a quantisation experiment cannot mutate the source."""
+        return MLPParams(
+            weights=[w.copy() for w in self.weights],
+            biases=[b.copy() for b in self.biases],
+        )
+
+    def named_tensors(self) -> list[tuple[str, np.ndarray]]:
+        """Flat ``(name, array)`` list; the unit of per-layer analysis."""
+        out: list[tuple[str, np.ndarray]] = []
+        for i in range(self.n_layers):
+            out.append((f"layers.{i}.weight", self.weights[i]))
+            out.append((f"layers.{i}.bias", self.biases[i]))
+        return out
+
+    def total_parameters(self) -> int:
+        """Total scalar count across weights and biases."""
+        return sum(int(w.size) for w in self.weights) + sum(int(b.size) for b in self.biases)
+
+    def shapes(self) -> list[tuple[int, int]]:
+        """Weight matrix shapes, in layer order."""
+        return [tuple(w.shape) for w in self.weights]  # type: ignore[misc]

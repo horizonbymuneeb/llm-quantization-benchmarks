@@ -38,3 +38,27 @@ def test_clusters_are_deterministic_for_a_fixed_seed() -> None:
     b, yb = make_clusters(100, 6, 3, 4, 1.0, 0.5, seed=7)
     np.testing.assert_array_equal(a, b)
     np.testing.assert_array_equal(ya, yb)
+
+
+def test_clusters_change_with_the_seed() -> None:
+    a, _ = make_clusters(100, 6, 3, 4, 1.0, 0.5, seed=7)
+    b, _ = make_clusters(100, 6, 3, 4, 1.0, 0.5, seed=8)
+    assert not np.array_equal(a, b)
+
+
+def test_clusters_class_separation_moves_the_centroids_apart() -> None:
+    # Measure the gap between the two class centroids, not between two rows:
+    # rows are shuffled and individually noisy, so single-row distances say
+    # nothing about separation.
+    def centroid_gap(sep: float) -> float:
+        x, y = make_clusters(600, 4, 2, 4, sep, 0.3, seed=2)
+        return float(np.linalg.norm(x[y == 0].mean(axis=0) - x[y == 1].mean(axis=0)))
+
+    assert centroid_gap(4.0) > centroid_gap(0.5)
+
+
+def test_clusters_split_the_sample_count_evenly_across_classes() -> None:
+    _, y = make_clusters(1000, 5, 4, 3, 1.0, 0.5, seed=3)
+    counts = np.bincount(y, minlength=4)
+    assert counts.sum() == 1000
+    assert int(counts.max() - counts.min()) <= 1
