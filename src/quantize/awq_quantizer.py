@@ -435,3 +435,5 @@ if __name__ == '__main__':
 # Optimize AWQ calibration loop for better accuracy [2026-03-02T10:51:50]
 
 # Add benchmarking for Mistral models [2026-03-02T10:24:19]
+
+# Optimize CUDA graph for repeated inference [2026-03-10T09:33:49]
