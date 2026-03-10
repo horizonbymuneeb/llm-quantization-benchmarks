@@ -62,3 +62,21 @@ def test_clusters_split_the_sample_count_evenly_across_classes() -> None:
     counts = np.bincount(y, minlength=4)
     assert counts.sum() == 1000
     assert int(counts.max() - counts.min()) <= 1
+
+
+def test_moons_produces_the_requested_shape() -> None:
+    x, y = make_moons(300, 7, 3, 0.1, seed=4)
+    assert x.shape == (300, 7)
+    assert set(np.unique(y)) == {0, 1, 2}
+
+
+def test_moons_rejects_a_single_class() -> None:
+    with pytest.raises(ValueError, match="at least 2 classes"):
+        make_moons(100, 4, 1, 0.1, seed=0)
+
+
+def test_rings_are_ordered_by_radius() -> None:
+    x, y = make_rings(900, 2, 3, 0.05, seed=5)
+    radii = np.linalg.norm(x, axis=1)
+    # Class 0 is the innermost ring and class 2 the outermost.
+    assert radii[y == 0].mean() < radii[y == 1].mean() < radii[y == 2].mean()

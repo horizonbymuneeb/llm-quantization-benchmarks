@@ -58,3 +58,27 @@ class MLPParams:
     def shapes(self) -> list[tuple[int, int]]:
         """Weight matrix shapes, in layer order."""
         return [tuple(w.shape) for w in self.weights]  # type: ignore[misc]
+
+
+@dataclass
+class ForwardCache:
+    """Per-layer intermediates kept for backpropagation and calibration.
+
+    ``pre_activations[i]`` is the affine output of layer ``i`` and
+    ``post_activations[i]`` is that after the nonlinearity; the last entry is
+    the softmax probability matrix.
+    """
+
+    inputs: list[np.ndarray] = field(default_factory=list)
+    pre_activations: list[np.ndarray] = field(default_factory=list)
+    post_activations: list[np.ndarray] = field(default_factory=list)
+    probabilities: np.ndarray | None = None
+
+
+def layer_sizes(n_features: int, hidden_sizes: list[int] | tuple[int, ...], n_classes: int) -> list[int]:
+    """Full width list including input and output dimensions."""
+    if n_features <= 0 or n_classes < 2:
+        raise ValueError("n_features must be positive and n_classes at least 2")
+    if any(h <= 0 for h in hidden_sizes):
+        raise ValueError(f"hidden sizes must be positive, got {hidden_sizes}")
+    return [int(n_features), *[int(h) for h in hidden_sizes], int(n_classes)]
