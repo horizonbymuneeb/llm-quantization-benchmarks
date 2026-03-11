@@ -300,3 +300,5 @@ if __name__ == '__main__':
 # Add support for custom quantization config [2026-03-05T20:31:26]
 
 # Add support for custom quantization config [2026-03-06T11:22:12]
+
+# Update requirements for torch 2.2.0 [2026-03-11T16:11:29]
