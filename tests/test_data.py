@@ -80,3 +80,33 @@ def test_rings_are_ordered_by_radius() -> None:
     radii = np.linalg.norm(x, axis=1)
     # Class 0 is the innermost ring and class 2 the outermost.
     assert radii[y == 0].mean() < radii[y == 1].mean() < radii[y == 2].mean()
+
+
+def test_padding_a_generator_to_more_features_adds_noise_only() -> None:
+    x, _ = make_moons(200, 10, 2, 0.1, seed=6)
+    # The first two columns carry structure; the rest are standardised noise and
+    # must not be constant.
+    assert x.shape[1] == 10
+    assert np.all(x[:, 2:].std(axis=0) > 0.0)
+
+
+def test_stratified_split_keeps_every_class_on_both_sides() -> None:
+    rng = np.random.default_rng(0)
+    x = rng.normal(size=(200, 3)).astype(np.float32)
+    y = np.repeat(np.arange(4), 50)
+    x_tr, y_tr, x_te, y_te = stratified_split(x, y, 0.25, seed=1)
+    assert set(np.unique(y_tr)) == {0, 1, 2, 3}
+    assert set(np.unique(y_te)) == {0, 1, 2, 3}
+    assert x_tr.shape[0] + x_te.shape[0] == 200
+    # Each class contributes round(50 * 0.25) = 12 test rows.
+    counts = np.bincount(y_te, minlength=4)
+    np.testing.assert_array_equal(counts, [12, 12, 12, 12])
+
+
+def test_stratified_split_rejects_a_bad_fraction() -> None:
+    x = np.zeros((10, 2), dtype=np.float32)
+    y = np.zeros(10, dtype=np.int64)
+    with pytest.raises(ValueError, match="test_fraction must lie"):
+        stratified_split(x, y, 1.0, seed=0)
+    with pytest.raises(ValueError, match="test_fraction must lie"):
+        stratified_split(x, y, 0.0, seed=0)

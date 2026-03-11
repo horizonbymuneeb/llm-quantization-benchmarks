@@ -82,3 +82,53 @@ def layer_sizes(n_features: int, hidden_sizes: list[int] | tuple[int, ...], n_cl
     if any(h <= 0 for h in hidden_sizes):
         raise ValueError(f"hidden sizes must be positive, got {hidden_sizes}")
     return [int(n_features), *[int(h) for h in hidden_sizes], int(n_classes)]
+
+
+def init_params(
+    sizes: list[int],
+    activation: str = "relu",
+    seed: int = 0,
+) -> MLPParams:
+    """He (ReLU) or Xavier (tanh) initialisation.
+
+    The choice matters for a *quantisation* benchmark: a badly scaled
+    initialisation leaves tiny weights that quantise to zero, so the INT4 arm
+    would report catastrophic damage that is an artefact of the init rather
+    than of the format.
+    """
+    if len(sizes) < 2:
+        raise ValueError("need at least input and output sizes")
+    if activation not in ("relu", "tanh"):
+        raise ValueError(f"unsupported activation {activation!r}")
+    rng = np.random.default_rng(seed)
+    weights: list[np.ndarray] = []
+    biases: list[np.ndarray] = []
+    for i in range(len(sizes) - 1):
+        fan_in, fan_out = sizes[i], sizes[i + 1]
+        if activation == "relu":
+            std = np.sqrt(2.0 / fan_in)
+        else:
+            std = np.sqrt(2.0 / (fan_in + fan_out))
+        w = rng.normal(0.0, std, size=(fan_out, fan_in)).astype(np.float32)
+        weights.append(w)
+        biases.append(np.zeros(fan_out, dtype=np.float32))
+    return MLPParams(weights=weights, biases=biases)
+
+
+def activate(x: np.ndarray, activation: str) -> np.ndarray:
+    """Apply the nonlinearity."""
+    if activation == "relu":
+        return np.maximum(x, 0.0).astype(np.float32)
+    if activation == "tanh":
+        return np.tanh(x).astype(np.float32)
+    raise ValueError(f"unsupported activation {activation!r}")
+
+
+def activation_grad(x: np.ndarray, activation: str) -> np.ndarray:
+    """Derivative of the nonlinearity, evaluated at the pre-activation ``x``."""
+    if activation == "relu":
+        return (x > 0.0).astype(np.float32)
+    if activation == "tanh":
+        t = np.tanh(x)
+        return (1.0 - t * t).astype(np.float32)
+    raise ValueError(f"unsupported activation {activation!r}")
