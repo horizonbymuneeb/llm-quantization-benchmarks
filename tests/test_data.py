@@ -110,3 +110,31 @@ def test_stratified_split_rejects_a_bad_fraction() -> None:
         stratified_split(x, y, 1.0, seed=0)
     with pytest.raises(ValueError, match="test_fraction must lie"):
         stratified_split(x, y, 0.0, seed=0)
+
+
+def test_stratified_split_is_deterministic() -> None:
+    rng = np.random.default_rng(1)
+    x = rng.normal(size=(60, 2)).astype(np.float32)
+    y = np.repeat([0, 1], 30)
+    a = stratified_split(x, y, 0.3, seed=9)
+    b = stratified_split(x, y, 0.3, seed=9)
+    for left, right in zip(a, b):
+        np.testing.assert_array_equal(left, right)
+
+
+def test_build_dataset_reports_a_consistent_summary() -> None:
+    config = DataConfig(n_samples=400, n_features=6, n_classes=4, n_informative=4, seed=2)
+    dataset = build_dataset(config)
+    summary = dataset.summary()
+    assert summary["n_train"] + summary["n_test"] == 400
+    assert summary["generator"] == "clusters"
+    assert dataset.n_features == 6
+    assert dataset.n_classes == 4
+
+
+def test_build_dataset_dispatches_every_generator() -> None:
+    for generator in ("clusters", "moons", "ring"):
+        config = DataConfig(n_samples=200, n_features=5, n_classes=3, n_informative=3, generator=generator, seed=0)
+        dataset = build_dataset(config)
+        assert dataset.generator == generator
+        assert dataset.x_train.shape[1] == 5

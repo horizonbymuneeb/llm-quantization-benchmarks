@@ -132,3 +132,23 @@ def activation_grad(x: np.ndarray, activation: str) -> np.ndarray:
         t = np.tanh(x)
         return (1.0 - t * t).astype(np.float32)
     raise ValueError(f"unsupported activation {activation!r}")
+
+
+def softmax(logits: np.ndarray) -> np.ndarray:
+    """Numerically stable row-wise softmax.
+
+    Subtracting the row max before exponentiating is not optional here: the
+    affine outputs of the last layer reach the hundreds during early training,
+    and ``exp`` of that overflows float32.
+    """
+    shifted = logits - np.max(logits, axis=1, keepdims=True)
+    exp = np.exp(shifted.astype(np.float32))
+    return (exp / np.sum(exp, axis=1, keepdims=True)).astype(np.float32)
+
+
+def cross_entropy(probabilities: np.ndarray, labels: np.ndarray) -> float:
+    """Mean cross-entropy in nats, clipped to avoid ``log(0)``."""
+    labels = np.asarray(labels, dtype=np.int64)
+    eps = 1e-12
+    picked = probabilities[np.arange(labels.size), labels]
+    return float(-np.mean(np.log(np.clip(picked, eps, 1.0))))
