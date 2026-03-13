@@ -437,3 +437,5 @@ if __name__ == '__main__':
 # Add benchmarking for Mistral models [2026-03-02T10:24:19]
 
 # Optimize CUDA graph for repeated inference [2026-03-10T09:33:49]
+
+# Add support for 3-bit quantization [2026-03-13T13:26:58]
