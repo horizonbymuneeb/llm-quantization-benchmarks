@@ -153,3 +153,4 @@
 [2026-03-11T16:11:29] Update requirements for torch 2.2.0
 [2026-03-12T19:18:59] Update README with benchmarking results
 [2026-03-13T13:26:58] Add support for 3-bit quantization
+[2026-03-15T20:22:16] Optimize CUDA graph for repeated inference

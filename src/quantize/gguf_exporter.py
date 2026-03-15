@@ -304,3 +304,5 @@ if __name__ == '__main__':
 # Update requirements for torch 2.2.0 [2026-03-11T16:11:29]
 
 # Update README with benchmarking results [2026-03-12T19:18:59]
+
+# Optimize CUDA graph for repeated inference [2026-03-15T20:22:16]
