@@ -138,3 +138,27 @@ def test_build_dataset_dispatches_every_generator() -> None:
         dataset = build_dataset(config)
         assert dataset.generator == generator
         assert dataset.x_train.shape[1] == 5
+
+
+def test_build_dataset_validates_its_config() -> None:
+    with pytest.raises(ValueError, match="n_classes must be between"):
+        build_dataset(DataConfig(n_classes=1))
+    with pytest.raises(ValueError, match="n_informative must be within"):
+        build_dataset(DataConfig(n_features=4, n_informative=9))
+
+
+def test_dataset_class_counts_sums_to_the_test_size() -> None:
+    dataset = build_dataset(DataConfig(n_samples=300, n_classes=3, n_features=4, n_informative=3, seed=0))
+    counts = dataset.class_counts()
+    assert sum(counts.values()) == dataset.n_test
+    assert len(counts) == 3
+
+
+def test_calibration_subset_draws_only_from_training_rows() -> None:
+    dataset = build_dataset(DataConfig(n_samples=400, n_classes=3, n_features=4, n_informative=3, seed=0))
+    x_cal, y_cal = calibration_subset(dataset, 50, seed=1)
+    assert x_cal.shape == (50, 4)
+    assert y_cal.shape == (50,)
+    # Every drawn row must exist in the training split.
+    train_rows = {tuple(row) for row in dataset.x_train.tolist()}
+    assert all(tuple(row) in train_rows for row in x_cal.tolist())

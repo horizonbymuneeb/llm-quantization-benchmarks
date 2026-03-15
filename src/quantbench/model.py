@@ -152,3 +152,123 @@ def cross_entropy(probabilities: np.ndarray, labels: np.ndarray) -> float:
     eps = 1e-12
     picked = probabilities[np.arange(labels.size), labels]
     return float(-np.mean(np.log(np.clip(picked, eps, 1.0))))
+
+
+def forward(
+    params: MLPParams,
+    x: np.ndarray,
+    activation: str = "relu",
+    record: bool = False,
+) -> tuple[np.ndarray, ForwardCache | None]:
+    """Run the network and return softmax probabilities.
+
+    When ``record`` is true the returned cache holds every intermediate array,
+    which both backpropagation and activation-range calibration consume.
+    """
+    if x.ndim != 2:
+        raise ValueError(f"expected a 2-D input, got shape {x.shape}")
+    if x.shape[1] != params.weights[0].shape[1]:
+        raise ValueError(
+            f"input has {x.shape[1]} features but the model expects {params.weights[0].shape[1]}"
+        )
+    cache = ForwardCache() if record else None
+    current = np.asarray(x, dtype=np.float32)
+    n = params.n_layers
+    for i in range(n):
+        if cache is not None:
+            cache.inputs.append(current)
+        pre = current @ params.weights[i].T + params.biases[i]
+        if i == n - 1:
+            if cache is not None:
+                cache.pre_activations.append(pre)
+            current = pre
+            break
+        post = activate(pre, activation)
+        if cache is not None:
+            cache.pre_activations.append(pre)
+            cache.post_activations.append(post)
+        current = post
+    probs = softmax(current)
+    if cache is not None:
+        cache.probabilities = probs
+    return probs, cache
+
+
+def backward(
+    params: MLPParams,
+    cache: ForwardCache,
+    labels: np.ndarray,
+    activation: str = "relu",
+) -> tuple[list[np.ndarray], list[np.ndarray]]:
+    """Backpropagate the cross-entropy gradient.
+
+    The softmax/cross-entropy pair has the well-known ``p - onehot`` gradient,
+    so the output layer needs no separate Jacobian.
+    """
+    if cache.probabilities is None:
+        raise ValueError("cache is missing probabilities; call forward(record=True)")
+    labels = np.asarray(labels, dtype=np.int64)
+    batch = labels.size
+    n_classes = cache.probabilities.shape[1]
+    grad_logits = cache.probabilities.copy()
+    grad_logits[np.arange(batch), labels] -= 1.0
+    grad_logits /= float(batch)
+
+    grad_w: list[np.ndarray] = [np.zeros(0)] * params.n_layers
+    grad_b: list[np.ndarray] = [np.zeros(0)] * params.n_layers
+    delta = grad_logits
+    for i in range(params.n_layers - 1, -1, -1):
+        layer_in = cache.inputs[i]
+        grad_w[i] = (delta.T @ layer_in).astype(np.float32)
+        grad_b[i] = np.sum(delta, axis=0).astype(np.float32)
+        if i > 0:
+            delta = (delta @ params.weights[i]) * activation_grad(
+                cache.pre_activations[i - 1], activation
+            )
+    return grad_w, grad_b
+
+
+class AdamState:
+    """First and second moment estimates for the Adam optimiser."""
+
+    def __init__(self, params: MLPParams, beta1: float = 0.9, beta2: float = 0.999) -> None:
+        self.beta1 = beta1
+        self.beta2 = beta2
+        self.m_w = [np.zeros_like(w) for w in params.weights]
+        self.v_w = [np.zeros_like(w) for w in params.weights]
+        self.m_b = [np.zeros_like(b) for b in params.biases]
+        self.v_b = [np.zeros_like(b) for b in params.biases]
+        self.t = 0
+
+    def step(
+        self,
+        params: MLPParams,
+        grad_w: list[np.ndarray],
+        grad_b: list[np.ndarray],
+        lr: float,
+        weight_decay: float = 0.0,
+    ) -> None:
+        """Apply one Adam update in place on ``params``.
+
+        Decoupled weight decay (AdamW form) is used rather than adding
+        ``wd * w`` to the gradient, because L2-in-the-gradient interacts badly
+        with adaptive scaling and shrinks large weights less than small ones.
+        """
+        self.t += 1
+        bc1 = 1.0 - self.beta1**self.t
+        bc2 = 1.0 - self.beta2**self.t
+        eps = 1e-8
+        for i in range(params.n_layers):
+            self.m_w[i] = self.beta1 * self.m_w[i] + (1 - self.beta1) * grad_w[i]
+            self.v_w[i] = self.beta2 * self.v_w[i] + (1 - self.beta2) * (grad_w[i] ** 2)
+            m_hat = self.m_w[i] / bc1
+            v_hat = self.v_w[i] / bc2
+            params.weights[i] -= (lr * m_hat / (np.sqrt(v_hat) + eps)).astype(np.float32)
+            if weight_decay:
+                params.weights[i] -= (lr * weight_decay * params.weights[i]).astype(np.float32)
+
+            self.m_b[i] = self.beta1 * self.m_b[i] + (1 - self.beta1) * grad_b[i]
+            self.v_b[i] = self.beta2 * self.v_b[i] + (1 - self.beta2) * (grad_b[i] ** 2)
+            m_hat_b = self.m_b[i] / bc1
+            v_hat_b = self.v_b[i] / bc2
+            params.biases[i] -= (lr * m_hat_b / (np.sqrt(v_hat_b) + eps)).astype(np.float32)
