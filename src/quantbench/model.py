@@ -295,3 +295,58 @@ def accuracy(probabilities: np.ndarray, labels: np.ndarray) -> float:
     """Fraction of rows whose argmax matches the label."""
     preds = np.argmax(probabilities, axis=1)
     return float(np.mean(preds == np.asarray(labels, dtype=np.int64)))
+
+
+def train(
+    params: MLPParams,
+    x_train: np.ndarray,
+    y_train: np.ndarray,
+    config: ModelConfig,
+    x_test: np.ndarray | None = None,
+    y_test: np.ndarray | None = None,
+) -> TrainHistory:
+    """Fit ``params`` in place and return the training curve.
+
+    Full-batch shuffling per epoch with mini-batch Adam.  The last batch of an
+    epoch may be smaller than ``batch_size`` and is used as-is rather than
+    dropped, so a dataset that is not a multiple of the batch size still
+    contributes all of its rows.
+    """
+    config.validate()
+    rng = np.random.default_rng(config.seed)
+    optimiser = AdamState(params)
+    history = TrainHistory()
+    n = x_train.shape[0]
+    for epoch in range(config.epochs):
+        order = rng.permutation(n)
+        epoch_loss = 0.0
+        seen = 0
+        for start in range(0, n, config.batch_size):
+            idx = order[start : start + config.batch_size]
+            xb = x_train[idx]
+            yb = y_train[idx]
+            probs, cache = forward(params, xb, config.activation, record=True)
+            assert cache is not None
+            epoch_loss += cross_entropy(probs, yb) * idx.size
+            seen += idx.size
+            grad_w, grad_b = backward(params, cache, yb, config.activation)
+            optimiser.step(params, grad_w, grad_b, config.learning_rate, config.weight_decay)
+        history.train_loss.append(epoch_loss / max(seen, 1))
+        train_probs, _ = forward(params, x_train, config.activation)
+        history.train_accuracy.append(accuracy(train_probs, y_train))
+        if x_test is not None and y_test is not None:
+            test_probs, _ = forward(params, x_test, config.activation)
+            history.test_accuracy.append(accuracy(test_probs, y_test))
+    return history
+
+
+def predict(params: MLPParams, x: np.ndarray, activation: str = "relu") -> np.ndarray:
+    """Predicted class indices."""
+    probs, _ = forward(params, x, activation)
+    return np.argmax(probs, axis=1)
+
+
+def predict_proba(params: MLPParams, x: np.ndarray, activation: str = "relu") -> np.ndarray:
+    """Predicted class probabilities."""
+    probs, _ = forward(params, x, activation)
+    return probs

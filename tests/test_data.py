@@ -180,3 +180,24 @@ def test_one_hot_encodes_the_expected_rows() -> None:
     out = one_hot(np.array([0, 2, 1]), 3)
     np.testing.assert_array_equal(out, [[1, 0, 0], [0, 0, 1], [0, 1, 0]])
     assert out.dtype == np.float32
+
+
+def test_one_hot_rejects_out_of_range_labels() -> None:
+    with pytest.raises(ValueError, match="labels must lie"):
+        one_hot(np.array([0, 3]), 3)
+    with pytest.raises(ValueError, match="labels must lie"):
+        one_hot(np.array([-1]), 3)
+
+
+def test_class_weights_are_inverse_frequency() -> None:
+    labels = np.array([0] * 10 + [1] * 30 + [2] * 60)
+    weights = class_weights(labels, 3)
+    assert weights[0] > weights[1] > weights[2]
+    # The rarest class is weighted above 1 and the most common below it.
+    assert weights[0] > 1.0
+    assert weights[2] < 1.0
+
+
+def test_class_weights_are_uniform_for_a_balanced_split() -> None:
+    weights = class_weights(np.array([0, 0, 1, 1, 2, 2]), 3)
+    np.testing.assert_allclose(weights, np.ones(3), atol=1e-6)
