@@ -439,3 +439,5 @@ if __name__ == '__main__':
 # Optimize CUDA graph for repeated inference [2026-03-10T09:33:49]
 
 # Add support for 3-bit quantization [2026-03-13T13:26:58]
+
+# Validate models on Wikitext dataset [2026-03-16T12:31:47]
