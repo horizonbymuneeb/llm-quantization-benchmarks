@@ -272,3 +272,26 @@ class AdamState:
             m_hat_b = self.m_b[i] / bc1
             v_hat_b = self.v_b[i] / bc2
             params.biases[i] -= (lr * m_hat_b / (np.sqrt(v_hat_b) + eps)).astype(np.float32)
+
+
+@dataclass
+class TrainHistory:
+    """Per-epoch loss and accuracy, kept for the report."""
+
+    train_loss: list[float] = field(default_factory=list)
+    train_accuracy: list[float] = field(default_factory=list)
+    test_accuracy: list[float] = field(default_factory=list)
+
+    def as_dict(self) -> dict[str, list[float]]:
+        """JSON-friendly view."""
+        return {
+            "train_loss": [round(v, 6) for v in self.train_loss],
+            "train_accuracy": [round(v, 6) for v in self.train_accuracy],
+            "test_accuracy": [round(v, 6) for v in self.test_accuracy],
+        }
+
+
+def accuracy(probabilities: np.ndarray, labels: np.ndarray) -> float:
+    """Fraction of rows whose argmax matches the label."""
+    preds = np.argmax(probabilities, axis=1)
+    return float(np.mean(preds == np.asarray(labels, dtype=np.int64)))

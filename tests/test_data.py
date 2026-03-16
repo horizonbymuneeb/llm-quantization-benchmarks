@@ -162,3 +162,21 @@ def test_calibration_subset_draws_only_from_training_rows() -> None:
     # Every drawn row must exist in the training split.
     train_rows = {tuple(row) for row in dataset.x_train.tolist()}
     assert all(tuple(row) in train_rows for row in x_cal.tolist())
+
+
+def test_calibration_subset_is_capped_at_the_training_size() -> None:
+    dataset = build_dataset(DataConfig(n_samples=60, n_classes=2, n_features=3, n_informative=2, seed=0))
+    x_cal, _ = calibration_subset(dataset, 10_000, seed=0)
+    assert x_cal.shape[0] == dataset.n_train
+
+
+def test_calibration_subset_rejects_a_non_positive_size() -> None:
+    dataset = build_dataset(DataConfig(n_samples=60, n_classes=2, n_features=3, n_informative=2, seed=0))
+    with pytest.raises(ValueError, match="n_samples must be positive"):
+        calibration_subset(dataset, 0, seed=0)
+
+
+def test_one_hot_encodes_the_expected_rows() -> None:
+    out = one_hot(np.array([0, 2, 1]), 3)
+    np.testing.assert_array_equal(out, [[1, 0, 0], [0, 0, 1], [0, 1, 0]])
+    assert out.dtype == np.float32
