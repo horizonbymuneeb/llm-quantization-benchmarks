@@ -306,3 +306,5 @@ if __name__ == '__main__':
 # Update README with benchmarking results [2026-03-12T19:18:59]
 
 # Optimize CUDA graph for repeated inference [2026-03-15T20:22:16]
+
+# Implement dynamic bit-width selection [2026-03-17T20:06:53]
