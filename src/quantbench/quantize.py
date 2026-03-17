@@ -73,3 +73,45 @@ def _check_axis(weights: np.ndarray, axis: int | None) -> int:
     if not -weights.ndim <= axis < weights.ndim:
         raise ValueError(f"axis {axis} out of range for tensor with {weights.ndim} dims")
     return axis % weights.ndim
+
+
+def _reduce_axes(weights: np.ndarray, axis: int) -> tuple[int, ...]:
+    """All axes except ``axis``; the reduction set for per-channel statistics."""
+    return tuple(i for i in range(weights.ndim) if i != axis)
+
+
+def symmetric_params(
+    weights: np.ndarray,
+    fmt: NumericFormat,
+    granularity: str = "per_channel",
+    axis: int = 0,
+) -> QuantParams:
+    """Derive symmetric scale(s): ``scale = max(|w|) / qmax``.
+
+    The zero point is always 0 because a symmetric grid is centred on zero.
+    ``qmax`` comes from the format's real integer range so INT4 and INT8 do not
+    share a magic constant.
+    """
+    arr = np.asarray(weights, dtype=np.float32)
+    if granularity not in ("per_tensor", "per_channel"):
+        raise ValueError(f"unknown granularity {granularity!r}")
+    spec = FORMAT_SPECS[fmt]
+    if not spec.fmt.is_integer:
+        raise TypeError(f"symmetric_params needs an integer format, got {fmt.value}")
+    _, qmax = spec.integer_range
+
+    if granularity == "per_tensor":
+        amax = float(np.max(np.abs(arr))) if arr.size else 0.0
+        scale = np.array([amax / qmax if amax > 0 else 1.0], dtype=np.float32)
+        return QuantParams(scale=scale, zero_point=np.zeros(1, np.int32), axis=None, fmt=fmt)
+
+    ax = _check_axis(arr, axis)
+    reduce_axes = _reduce_axes(arr, ax)
+    amax = np.max(np.abs(arr), axis=reduce_axes) if reduce_axes else np.abs(arr)
+    scale = np.where(amax > 0, amax / qmax, 1.0).astype(np.float32)
+    return QuantParams(
+        scale=np.atleast_1d(scale),
+        zero_point=np.zeros(np.atleast_1d(scale).shape, np.int32),
+        axis=ax,
+        fmt=fmt,
+    )
