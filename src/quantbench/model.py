@@ -350,3 +350,24 @@ def predict_proba(params: MLPParams, x: np.ndarray, activation: str = "relu") ->
     """Predicted class probabilities."""
     probs, _ = forward(params, x, activation)
     return probs
+
+
+def build_and_train(
+    config: ModelConfig,
+    n_features: int,
+    n_classes: int,
+    x_train: np.ndarray,
+    y_train: np.ndarray,
+    x_test: np.ndarray,
+    y_test: np.ndarray,
+) -> tuple[MLPParams, TrainHistory]:
+    """Initialise and train in one call; the entry point the sweep uses."""
+    sizes = layer_sizes(n_features, config.layers, n_classes)
+    params = init_params(sizes, config.activation, config.seed)
+    history = train(params, x_train, y_train, config, x_test, y_test)
+    return params, history
+
+
+def layer_names(params: MLPParams) -> list[str]:
+    """Human-readable layer identifiers used in reports and sensitivity output."""
+    return [f"layer{i}_{w.shape[0]}x{w.shape[1]}" for i, w in enumerate(params.weights)]
