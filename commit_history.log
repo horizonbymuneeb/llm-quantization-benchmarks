@@ -157,3 +157,4 @@
 [2026-03-16T12:31:47] Validate models on Wikitext dataset
 [2026-03-16T18:06:11] Validate models on Wikitext dataset
 [2026-03-17T20:06:53] Implement dynamic bit-width selection
+[2026-03-17T18:54:32] Optimize CUDA graph for repeated inference
