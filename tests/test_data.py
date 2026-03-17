@@ -201,3 +201,17 @@ def test_class_weights_are_inverse_frequency() -> None:
 def test_class_weights_are_uniform_for_a_balanced_split() -> None:
     weights = class_weights(np.array([0, 0, 1, 1, 2, 2]), 3)
     np.testing.assert_allclose(weights, np.ones(3), atol=1e-6)
+
+
+def test_dataset_dataclass_exposes_row_counts() -> None:
+    dataset = Dataset(
+        x_train=np.zeros((5, 2), np.float32),
+        y_train=np.zeros(5, np.int64),
+        x_test=np.zeros((3, 2), np.float32),
+        y_test=np.zeros(3, np.int64),
+        n_classes=2,
+        n_features=2,
+        generator="clusters",
+    )
+    assert dataset.n_train == 5
+    assert dataset.n_test == 3
