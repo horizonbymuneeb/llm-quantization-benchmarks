@@ -115,3 +115,60 @@ def symmetric_params(
         axis=ax,
         fmt=fmt,
     )
+
+
+def asymmetric_params(
+    weights: np.ndarray,
+    fmt: NumericFormat,
+    granularity: str = "per_channel",
+    axis: int = 0,
+) -> QuantParams:
+    """Derive asymmetric scale(s) and zero point(s) from the observed range.
+
+    ``scale = (hi - lo) / (qmax - qmin)`` and the zero point is chosen so that
+    float ``0.0`` maps exactly onto an integer code.  That exactness is the
+    reason asymmetric mode is worth its extra arithmetic: zero padding and
+    zero-padded convolutions stay bit-exact.
+    """
+    arr = np.asarray(weights, dtype=np.float32)
+    if granularity not in ("per_tensor", "per_channel"):
+        raise ValueError(f"unknown granularity {granularity!r}")
+    spec = FORMAT_SPECS[fmt]
+    if not spec.fmt.is_integer:
+        raise TypeError(f"asymmetric_params needs an integer format, got {fmt.value}")
+    qmin, qmax = spec.integer_range
+
+    if granularity == "per_tensor":
+        lo, hi = float(arr.min()), float(arr.max())
+        scale, zp = _range_to_params(lo, hi, qmin, qmax)
+        return QuantParams(
+            scale=np.array([scale], np.float32),
+            zero_point=np.array([zp], np.int32),
+            axis=None,
+            fmt=fmt,
+        )
+
+    ax = _check_axis(arr, axis)
+    reduce_axes = _reduce_axes(arr, ax)
+    lo = np.min(arr, axis=reduce_axes) if reduce_axes else arr
+    hi = np.max(arr, axis=reduce_axes) if reduce_axes else arr
+    lo = np.atleast_1d(lo)
+    hi = np.atleast_1d(hi)
+    # A constant channel has zero span.  Give it a small but *absolute* scale
+    # rather than a relative epsilon: dividing by a near-zero span produces an
+    # enormous zero point that overflows the int32 cast.
+    span = np.where(hi > lo, hi - lo, 1.0).astype(np.float64)
+    scale = (span / float(qmax - qmin)).astype(np.float32)
+    safe_scale = np.where(scale > 0.0, scale, 1.0).astype(np.float64)
+    zero_point = np.rint(qmin - lo.astype(np.float64) / safe_scale)
+    zero_point = np.clip(zero_point, qmin, qmax).astype(np.int32)
+    return QuantParams(scale=scale, zero_point=zero_point, axis=ax, fmt=fmt)
+
+
+def _range_to_params(lo: float, hi: float, qmin: int, qmax: int) -> tuple[float, int]:
+    """Convert a float range into (scale, zero_point), guarding a degenerate range."""
+    if hi <= lo:
+        hi = lo + 1e-8
+    scale = (hi - lo) / float(qmax - qmin)
+    zp = int(round(qmin - lo / scale))
+    return float(scale), int(min(max(zp, qmin), qmax))
