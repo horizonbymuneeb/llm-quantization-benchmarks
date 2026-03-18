@@ -159,3 +159,4 @@
 [2026-03-17T20:06:53] Implement dynamic bit-width selection
 [2026-03-17T18:54:32] Optimize CUDA graph for repeated inference
 [2026-03-17T19:37:43] Update requirements for torch 2.2.0
+[2026-03-18T18:01:56] Fix INT4 overflow in weight quantization
