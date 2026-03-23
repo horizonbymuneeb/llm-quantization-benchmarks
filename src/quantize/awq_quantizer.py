@@ -445,3 +445,5 @@ if __name__ == '__main__':
 # Validate models on Wikitext dataset [2026-03-16T18:06:11]
 
 # Fix INT4 overflow in weight quantization [2026-03-18T18:01:56]
+
+# Add benchmarking for Mistral models [2026-03-23T09:09:16]
