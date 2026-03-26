@@ -172,3 +172,67 @@ def _range_to_params(lo: float, hi: float, qmin: int, qmax: int) -> tuple[float,
     scale = (hi - lo) / float(qmax - qmin)
     zp = int(round(qmin - lo / scale))
     return float(scale), int(min(max(zp, qmin), qmax))
+
+
+def derive_params(
+    weights: np.ndarray,
+    fmt: NumericFormat,
+    scheme: str = "symmetric",
+    granularity: str = "per_channel",
+    axis: int = 0,
+) -> QuantParams:
+    """Dispatch to the symmetric or asymmetric parameter derivation."""
+    if scheme == "symmetric":
+        return symmetric_params(weights, fmt, granularity, axis)
+    if scheme == "asymmetric":
+        return asymmetric_params(weights, fmt, granularity, axis)
+    raise ValueError(f"unknown scheme {scheme!r}")
+
+
+def apply_params(
+    weights: np.ndarray,
+    params: QuantParams,
+    round_mode: str = "nearest",
+    seed: int | None = None,
+) -> np.ndarray:
+    """Quantise ``weights`` with precomputed parameters and dequantise back.
+
+    Per-channel parameters are broadcast along the stored axis.  Stochastic
+    rounding is offered because it is unbiased in expectation: the round-trip
+    error stops being a systematic drift toward zero, which matters when many
+    layers are stacked.
+    """
+    arr = np.asarray(weights, dtype=np.float32)
+    if params.axis is None:
+        scale = float(params.scale[0])
+        zp = int(params.zero_point[0])
+        if round_mode == "stochastic":
+            codes = _stochastic_codes(arr, scale, zp, params.fmt, seed)
+            return codes
+        return quantize_to_grid(arr, params.fmt, scale, zp)
+
+    shape = [1] * arr.ndim
+    shape[params.axis] = params.scale.size
+    scale = params.scale.reshape(shape)
+    zp = params.zero_point.reshape(shape)
+    if round_mode == "stochastic":
+        return _stochastic_apply(arr, scale, zp, params.fmt, seed)
+
+    low, high = FORMAT_SPECS[params.fmt].integer_range
+    codes = np.rint(arr / scale).astype(np.int32) + zp
+    codes = np.clip(codes, low, high)
+    return ((codes - zp) * scale).astype(np.float32)
+
+
+def _stochastic_codes(
+    arr: np.ndarray, scale: float, zp: int, fmt: NumericFormat, seed: int | None
+) -> np.ndarray:
+    """Stochastic rounding for a per-tensor parameter set."""
+    low, high = FORMAT_SPECS[fmt].integer_range
+    rng = np.random.default_rng(seed)
+    exact = arr / np.float32(scale)
+    floor = np.floor(exact)
+    frac = exact - floor
+    bump = (rng.random(arr.shape) < frac).astype(np.float32)
+    codes = np.clip((floor + bump).astype(np.int32) + zp, low, high)
+    return ((codes - zp).astype(np.float32) * np.float32(scale)).astype(np.float32)
