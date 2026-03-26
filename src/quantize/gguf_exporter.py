@@ -312,3 +312,5 @@ if __name__ == '__main__':
 # Optimize CUDA graph for repeated inference [2026-03-17T18:54:32]
 
 # Update requirements for torch 2.2.0 [2026-03-17T19:37:43]
+
+# Add benchmarking for Mistral models [2026-03-26T14:26:32]
