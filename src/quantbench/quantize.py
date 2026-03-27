@@ -236,3 +236,45 @@ def _stochastic_codes(
     bump = (rng.random(arr.shape) < frac).astype(np.float32)
     codes = np.clip((floor + bump).astype(np.int32) + zp, low, high)
     return ((codes - zp).astype(np.float32) * np.float32(scale)).astype(np.float32)
+
+
+def _stochastic_apply(
+    arr: np.ndarray,
+    scale: np.ndarray,
+    zp: np.ndarray,
+    fmt: NumericFormat,
+    seed: int | None,
+) -> np.ndarray:
+    """Stochastic rounding with per-channel broadcasting."""
+    low, high = FORMAT_SPECS[fmt].integer_range
+    rng = np.random.default_rng(seed)
+    exact = arr / scale
+    floor = np.floor(exact)
+    frac = exact - floor
+    bump = (rng.random(arr.shape) < frac).astype(np.float32)
+    codes = np.clip((floor + bump).astype(np.int32) + zp, low, high)
+    return ((codes - zp) * scale).astype(np.float32)
+
+
+def quantize_tensor(
+    weights: np.ndarray,
+    fmt: NumericFormat,
+    scheme: str = "symmetric",
+    granularity: str = "per_channel",
+    axis: int = 0,
+    round_mode: str = "nearest",
+    seed: int | None = None,
+) -> tuple[np.ndarray, QuantParams]:
+    """Derive parameters then quantise, returning both the tensor and params."""
+    arr = np.asarray(weights, dtype=np.float32)
+    if fmt.is_float:
+        from .dtypes import simulate_format
+
+        return simulate_format(arr, fmt), QuantParams(
+            scale=np.array([1.0], np.float32),
+            zero_point=np.zeros(1, np.int32),
+            axis=None,
+            fmt=fmt,
+        )
+    params = derive_params(arr, fmt, scheme, granularity, axis)
+    return apply_params(arr, params, round_mode=round_mode, seed=seed), params

@@ -44,3 +44,27 @@ def test_integer_ranges_match_the_bit_width() -> None:
     assert int4.integer_range == (-8, 7)
     with pytest.raises(TypeError, match="not an integer format"):
         format_spec(NumericFormat.BF16).integer_range
+
+
+def test_format_spec_total_bits_for_floats_includes_sign() -> None:
+    assert FORMAT_SPECS[NumericFormat.FP32].total_bits == 32
+    assert FORMAT_SPECS[NumericFormat.BF16].total_bits == 16
+    assert FORMAT_SPECS[NumericFormat.FP16].total_bits == 16
+    spec = FormatSpec(NumericFormat.INT8, 0, 7, True)
+    assert spec.total_bits == 8
+    assert not spec.is_float
+
+
+def test_bf16_is_exact_on_representable_values() -> None:
+    values = np.array([1.0, 0.5, 2.0, -0.25, 0.0], dtype=np.float32)
+    np.testing.assert_array_equal(cast_bf16(values), values)
+
+
+def test_bf16_rounds_to_nearest_even_not_toward_zero() -> None:
+    # 1 + 2^-8 is exactly halfway between BF16 codes 1.0 and 1.0078125;
+    # round-half-to-even picks 1.0 (the even code).
+    halfway_low = np.array([1.0 + 2.0**-8], dtype=np.float32)
+    assert cast_bf16(halfway_low)[0] == np.float32(1.0)
+    # 1 + 3*2^-8 rounds up to 1.015625, above the halfway point.
+    above = np.array([1.0 + 3 * 2.0**-8], dtype=np.float32)
+    assert cast_bf16(above)[0] == np.float32(1.015625)
