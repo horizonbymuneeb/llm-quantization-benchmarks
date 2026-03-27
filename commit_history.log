@@ -162,3 +162,4 @@
 [2026-03-18T18:01:56] Fix INT4 overflow in weight quantization
 [2026-03-23T09:09:16] Add benchmarking for Mistral models
 [2026-03-26T14:26:32] Add benchmarking for Mistral models
+[2026-03-27T10:04:01] Add benchmarking for Mistral models
