@@ -447,3 +447,5 @@ if __name__ == '__main__':
 # Fix INT4 overflow in weight quantization [2026-03-18T18:01:56]
 
 # Add benchmarking for Mistral models [2026-03-23T09:09:16]
+
+# Update README with benchmarking results [2026-04-02T16:44:21]
