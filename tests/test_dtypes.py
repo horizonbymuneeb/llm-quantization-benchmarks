@@ -68,3 +68,26 @@ def test_bf16_rounds_to_nearest_even_not_toward_zero() -> None:
     # 1 + 3*2^-8 rounds up to 1.015625, above the halfway point.
     above = np.array([1.0 + 3 * 2.0**-8], dtype=np.float32)
     assert cast_bf16(above)[0] == np.float32(1.015625)
+
+
+def test_bf16_truncation_would_bias_downward_but_rounding_does_not() -> None:
+    rng = np.random.default_rng(0)
+    values = rng.normal(0.0, 1.0, size=5000).astype(np.float32)
+    rounded = cast_bf16(values)
+    mean_error = float(np.mean(rounded.astype(np.float64) - values.astype(np.float64)))
+    assert abs(mean_error) < 1e-4, mean_error
+
+
+def test_bf16_error_bound_is_bounded_by_the_mantissa_width() -> None:
+    rng = np.random.default_rng(1)
+    values = rng.uniform(-4.0, 4.0, size=2000).astype(np.float32)
+    error = np.abs(cast_bf16(values) - values)
+    # 7 explicit mantissa bits -> relative error <= 2^-8.
+    relative = error / np.abs(values)
+    assert float(np.max(relative)) <= 2.0**-8 + 1e-7
+
+
+def test_fp16_saturates_to_infinity_above_its_range() -> None:
+    out = cast_fp16(np.array([70000.0], dtype=np.float32))
+    assert np.isinf(out[0])
+    assert cast_fp16(np.array([65504.0], dtype=np.float32))[0] == np.float32(65504.0)

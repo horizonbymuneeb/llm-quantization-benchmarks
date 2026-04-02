@@ -278,3 +278,70 @@ def quantize_tensor(
         )
     params = derive_params(arr, fmt, scheme, granularity, axis)
     return apply_params(arr, params, round_mode=round_mode, seed=seed), params
+
+
+def quantization_error(original: np.ndarray, quantised: np.ndarray) -> dict[str, float]:
+    """Error statistics for a single quantised weight matrix.
+
+    Includes a cosine similarity because two matrices with the same RMSE can
+    have very different directions, and direction is what a downstream dot
+    product actually consumes.
+    """
+    orig = np.asarray(original, dtype=np.float64).ravel()
+    quant = np.asarray(quantised, dtype=np.float64).ravel()
+    if orig.shape != quant.shape:
+        raise ValueError(f"shape mismatch: {orig.shape} vs {quant.shape}")
+    diff = quant - orig
+    denom = float(np.linalg.norm(orig)) * float(np.linalg.norm(quant))
+    cosine = float(np.dot(orig, quant) / denom) if denom > 0 else 1.0
+    return {
+        "rmse": float(np.sqrt(np.mean(diff**2))),
+        "max_abs": float(np.max(np.abs(diff))) if diff.size else 0.0,
+        "cosine": cosine,
+        "cosine_distance": 1.0 - cosine,
+        "n_elements": float(orig.size),
+    }
+
+
+def effective_bits(weights: np.ndarray, fmt: NumericFormat) -> float:
+    """Bits per stored value, accounting for the scale/zero-point overhead.
+
+    A per-channel INT4 weight matrix is not 4 bits per value in practice: it
+    carries one float32 scale per output channel.  Reporting the *effective*
+    width keeps the compression story honest for small matrices, where the
+    overhead is a visible fraction of the payload.
+    """
+    arr = np.asarray(weights, dtype=np.float32)
+    payload_bits = storage_bytes(arr.shape, fmt) * 8
+    n = arr.size
+    if n == 0:
+        return 0.0
+    return payload_bits / n
+
+
+def quantize_layer_weights(
+    weights: np.ndarray,
+    fmt: NumericFormat,
+    scheme: str,
+    granularity: str,
+    round_mode: str = "nearest",
+    seed: int | None = None,
+) -> tuple[np.ndarray, QuantParams, dict[str, float]]:
+    """One-call quantisation of a weight matrix plus its diagnostics.
+
+    The axis is always 0 because every weight matrix in this project is stored
+    ``(out_features, in_features)``; per-channel means one scale per output
+    unit, which is the layout hardware kernels expect.
+    """
+    quantised, params = quantize_tensor(
+        weights,
+        fmt=fmt,
+        scheme=scheme,
+        granularity=granularity,
+        axis=0,
+        round_mode=round_mode,
+        seed=seed,
+    )
+    stats = quantization_error(weights, quantised)
+    stats["effective_bits"] = effective_bits(weights, fmt)
+    return quantised, params, stats
