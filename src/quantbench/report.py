@@ -28,3 +28,81 @@ from .sweep import (
 )
 
 REPORT_SCHEMA_VERSION = "1.0"
+
+
+def _sanitise(value: Any) -> Any:
+    """Recursively replace NaN/inf with ``None`` and tuples with lists."""
+    if isinstance(value, dict):
+        return {str(k): _sanitise(v) for k, v in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_sanitise(v) for v in value]
+    if isinstance(value, float):
+        if math.isnan(value) or math.isinf(value):
+            return None
+        return value
+    if isinstance(value, (int, str, bool)) or value is None:
+        return value
+    return str(value)
+
+
+def build_report(config: SweepConfig, result: SweepResult) -> dict[str, Any]:
+    """Assemble the full report dictionary from a completed sweep."""
+    return {
+        "meta": {
+            "schema_version": REPORT_SCHEMA_VERSION,
+            "tool": "quantbench",
+            "version": __version__,
+            "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+        },
+        "config": config_to_dict(config),
+        "dataset": result.dataset.summary(),
+        "training": {
+            "epochs": len(result.history.train_loss),
+            "final_train_loss": round(result.history.train_loss[-1], 6)
+            if result.history.train_loss
+            else None,
+            "final_train_accuracy": round(result.history.train_accuracy[-1], 6)
+            if result.history.train_accuracy
+            else None,
+            "final_test_accuracy": round(result.history.test_accuracy[-1], 6)
+            if result.history.test_accuracy
+            else None,
+            "history": result.history.as_dict(),
+        },
+        "calibration": result.calibration,
+        "reference_accuracy": round(result.reference_accuracy, 6),
+        "rows": [row.as_dict() for row in result.rows],
+        "delta_table": row_delta_table(result.rows),
+        "format_aggregates": aggregate_by_format(result.rows),
+        "sensitivity": result.sensitivity,
+        "cumulative_sensitivity": result.cumulative,
+        "mixed_precision": result.mixed_precision,
+        "parameter_share": result.layer_parameter_share,
+        "summary": {
+            "n_configurations": len(result.rows),
+            "best": result.best_row(),
+            "worst": result.worst_row(),
+            "churn_outliers": result.churn_outliers(),
+            "reference_accuracy": round(result.baseline_accuracy, 6),
+        },
+    }
+
+
+@dataclass(frozen=True)
+class ReportWriter:
+    """Writes a report to disk, creating the output directory if needed."""
+
+    output_dir: Path
+    filename: str = "sweep_report.json"
+
+    @property
+    def path(self) -> Path:
+        """Full path of the report file."""
+        return self.output_dir / self.filename
+
+    def write(self, report: dict[str, Any]) -> Path:
+        """Serialise ``report`` as strict JSON and return the written path."""
+        self.output_dir.mkdir(parents=True, exist_ok=True)
+        payload = json.dumps(_sanitise(report), indent=2, allow_nan=False)
+        self.path.write_text(payload + "\n", encoding="utf-8")
+        return self.path

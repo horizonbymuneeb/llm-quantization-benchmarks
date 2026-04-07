@@ -91,3 +91,24 @@ def test_fp16_saturates_to_infinity_above_its_range() -> None:
     out = cast_fp16(np.array([70000.0], dtype=np.float32))
     assert np.isinf(out[0])
     assert cast_fp16(np.array([65504.0], dtype=np.float32))[0] == np.float32(65504.0)
+
+
+def test_fp16_has_finer_resolution_than_bf16_near_one() -> None:
+    probe = np.array([1.0 + 2.0**-9], dtype=np.float32)
+    fp16_err = abs(float(cast_fp16(probe)[0]) - float(probe[0]))
+    bf16_err = abs(float(cast_bf16(probe)[0]) - float(probe[0]))
+    assert fp16_err < bf16_err
+
+
+def test_fp32_cast_is_a_copy_not_a_view() -> None:
+    src = np.array([1.5, 2.5], dtype=np.float32)
+    out = cast_fp32(src)
+    out[0] = 9.0
+    assert src[0] == np.float32(1.5)
+
+
+def test_quantize_to_grid_snaps_and_clamps() -> None:
+    values = np.array([0.0, 0.1, 0.2, 5.0, -5.0], dtype=np.float32)
+    out = quantize_to_grid(values, NumericFormat.INT8, scale=0.2)
+    # 0.1 / 0.2 is exactly 0.5, so it lands on the even code 0, not code 1.
+    np.testing.assert_allclose(out, [0.0, 0.0, 0.2, 5.0, -5.0], atol=1e-6)
