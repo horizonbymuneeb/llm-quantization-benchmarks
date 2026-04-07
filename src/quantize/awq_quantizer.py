@@ -451,3 +451,5 @@ if __name__ == '__main__':
 # Update README with benchmarking results [2026-04-02T16:44:21]
 
 # Add unit tests for int4 packing utils [2026-04-03T13:58:31]
+
+# Add benchmarking for Mistral models [2026-04-07T18:07:22]
