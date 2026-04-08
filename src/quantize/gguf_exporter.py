@@ -316,3 +316,5 @@ if __name__ == '__main__':
 # Add benchmarking for Mistral models [2026-03-26T14:26:32]
 
 # Add benchmarking for Mistral models [2026-03-27T10:04:01]
+
+# Add support for 3-bit quantization [2026-04-08T11:12:16]
