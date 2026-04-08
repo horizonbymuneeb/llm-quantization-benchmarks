@@ -112,3 +112,25 @@ def test_quantize_to_grid_snaps_and_clamps() -> None:
     out = quantize_to_grid(values, NumericFormat.INT8, scale=0.2)
     # 0.1 / 0.2 is exactly 0.5, so it lands on the even code 0, not code 1.
     np.testing.assert_allclose(out, [0.0, 0.0, 0.2, 5.0, -5.0], atol=1e-6)
+
+
+def test_quantize_to_grid_rounds_half_to_even() -> None:
+    # Codes 0.5 -> 0, 1.5 -> 2, 2.5 -> 2, 3.5 -> 4 under round-half-to-even.
+    values = np.array([0.5, 1.5, 2.5, 3.5], dtype=np.float32)
+    out = quantize_to_grid(values, NumericFormat.INT8, scale=1.0)
+    np.testing.assert_array_equal(out, [0.0, 2.0, 2.0, 4.0])
+
+
+def test_quantize_to_grid_truncate_mode_rounds_toward_zero() -> None:
+    values = np.array([0.9, 1.9, -1.9], dtype=np.float32)
+    out = quantize_to_grid(values, NumericFormat.INT8, scale=1.0, round_mode="truncate")
+    np.testing.assert_array_equal(out, [0.0, 1.0, -1.0])
+    with pytest.raises(ValueError, match="unknown round_mode"):
+        quantize_to_grid(values, NumericFormat.INT8, 1.0, round_mode="ceil")
+
+
+def test_quantize_to_grid_clamps_to_int4_range() -> None:
+    values = np.array([0.0, 100.0], dtype=np.float32)
+    out = quantize_to_grid(values, NumericFormat.INT4, scale=1.0)
+    assert out[1] == 7.0
+    assert quantize_to_grid(np.array([-100.0], dtype=np.float32), NumericFormat.INT4, 1.0)[0] == -8.0

@@ -106,3 +106,28 @@ class ReportWriter:
         payload = json.dumps(_sanitise(report), indent=2, allow_nan=False)
         self.path.write_text(payload + "\n", encoding="utf-8")
         return self.path
+
+
+def write_report(config: SweepConfig, result: SweepResult) -> Path:
+    """Build and write the report described by ``config``."""
+    writer = ReportWriter(
+        output_dir=Path(config.output_dir),
+        filename=config.report_name,
+    )
+    return writer.write(build_report(config, result))
+
+
+def load_report(path: str | Path) -> dict[str, Any]:
+    """Read a previously written report.
+
+    Used by the CLI's ``--compare`` mode and by tests that round-trip a report.
+    """
+    p = Path(path)
+    if not p.exists():
+        raise FileNotFoundError(f"report not found: {p}")
+    data = json.loads(p.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise ValueError(f"report root must be a mapping, got {type(data).__name__}")
+    if "rows" not in data:
+        raise ValueError("report is missing the 'rows' key")
+    return data
