@@ -134,3 +134,27 @@ def test_quantize_to_grid_clamps_to_int4_range() -> None:
     out = quantize_to_grid(values, NumericFormat.INT4, scale=1.0)
     assert out[1] == 7.0
     assert quantize_to_grid(np.array([-100.0], dtype=np.float32), NumericFormat.INT4, 1.0)[0] == -8.0
+
+
+def test_quantize_to_grid_applies_the_zero_point() -> None:
+    values = np.array([0.0, 1.0], dtype=np.float32)
+    plain = quantize_to_grid(values, NumericFormat.INT8, 1.0, zero_point=0)
+    shifted = quantize_to_grid(values, NumericFormat.INT8, 1.0, zero_point=10)
+    np.testing.assert_allclose(plain, values, atol=1e-6)
+    np.testing.assert_allclose(shifted, values, atol=1e-6)
+
+
+def test_quantize_to_grid_rejects_non_positive_scale() -> None:
+    with pytest.raises(ValueError, match="scale must be positive"):
+        quantize_to_grid(np.zeros(3, dtype=np.float32), NumericFormat.INT8, 0.0)
+    with pytest.raises(ValueError, match="scale must be positive"):
+        quantize_to_grid(np.zeros(3, dtype=np.float32), NumericFormat.INT8, -1.0)
+
+
+def test_storage_bytes_handles_int4_nibble_packing() -> None:
+    assert storage_bytes((10,), NumericFormat.INT4) == 5
+    assert storage_bytes((7,), NumericFormat.INT4) == 4
+    assert storage_bytes((10,), NumericFormat.INT8) == 10
+    assert storage_bytes((10,), NumericFormat.BF16) == 20
+    assert storage_bytes((10,), NumericFormat.FP32) == 40
+    assert storage_bytes((), NumericFormat.FP32) == 4

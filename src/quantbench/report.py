@@ -131,3 +131,78 @@ def load_report(path: str | Path) -> dict[str, Any]:
     if "rows" not in data:
         raise ValueError("report is missing the 'rows' key")
     return data
+
+
+def summarise_report(report: dict[str, Any]) -> str:
+    """Render a short human-readable digest of a report.
+
+    Kept textual (not a table) so it can be pasted into a log or a commit
+    message without alignment artefacts.
+    """
+    lines: list[str] = []
+    meta = report.get("meta", {})
+    lines.append(f"quantbench report {meta.get('version', '?')} ({meta.get('generated_at', '?')})")
+    ref = report.get("reference_accuracy")
+    lines.append(f"reference accuracy: {ref}")
+    rows = report.get("rows", [])
+    lines.append(f"configurations: {len(rows)}")
+    for entry in report.get("delta_table", [])[:10]:
+        lines.append(
+            f"  {entry['label']:<34s} x{entry['compression']:<6.2f} "
+            f"acc={entry['accuracy']:<7.4f} delta={entry['delta']:+.4f} "
+            f"flips={entry['flip_rate']:.4f}"
+        )
+    outliers = report.get("summary", {}).get("churn_outliers", [])
+    if outliers:
+        lines.append(f"churn outliers ({len(outliers)}):")
+        for item in outliers[:5]:
+            lines.append(
+                f"  {item['label']}: flip_rate={item['flip_rate']:.4f} "
+                f"vs accuracy_delta={item['accuracy_delta']:.4f}"
+            )
+    return "\n".join(lines)
+
+
+def compare_reports(baseline: dict[str, Any], candidate: dict[str, Any]) -> dict[str, Any]:
+    """Diff two reports row by row, keyed on the configuration label.
+
+    Only the headline numbers are compared: the purpose is to see whether a
+    change to the harness moved the conclusions, not to diff every float.
+    """
+    base_rows = {row["label"]: row for row in baseline.get("rows", [])}
+    cand_rows = {row["label"]: row for row in candidate.get("rows", [])}
+    shared = sorted(set(base_rows) & set(cand_rows))
+    rows: list[dict[str, Any]] = []
+    for label in shared:
+        b = base_rows[label]
+        c = cand_rows[label]
+        rows.append(
+            {
+                "label": label,
+                "accuracy_delta_diff": round(
+                    c["accuracy"]["accuracy_delta"] - b["accuracy"]["accuracy_delta"], 6
+                ),
+                "flip_rate_diff": round(
+                    c["churn"]["flip_rate"] - b["churn"]["flip_rate"], 6
+                ),
+                "spearman_diff": _diff(
+                    c["rank"]["spearman_global"], b["rank"]["spearman_global"]
+                ),
+            }
+        )
+    return {
+        "n_shared_configs": len(shared),
+        "only_in_baseline": sorted(set(base_rows) - set(cand_rows)),
+        "only_in_candidate": sorted(set(cand_rows) - set(base_rows)),
+        "reference_accuracy_diff": _diff(
+            candidate.get("reference_accuracy"), baseline.get("reference_accuracy")
+        ),
+        "rows": rows,
+    }
+
+
+def _diff(a: Any, b: Any) -> float | None:
+    """Numeric difference that tolerates missing or ``None`` values."""
+    if a is None or b is None:
+        return None
+    return round(float(a) - float(b), 6)
