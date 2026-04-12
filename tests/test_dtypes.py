@@ -183,3 +183,25 @@ def test_quant_error_stats_matches_a_hand_computed_rmse() -> None:
     assert stats["rmse"] == pytest.approx(float(np.sqrt((9.0 + 16.0) / 4.0)))
     assert stats["max_abs"] == pytest.approx(4.0)
     assert stats["mean_abs"] == pytest.approx(1.75)
+
+
+def test_quant_error_stats_rejects_a_shape_mismatch() -> None:
+    with pytest.raises(ValueError, match="shape mismatch"):
+        quant_error_stats(np.zeros((2, 2)), np.zeros((4,)))
+
+
+def test_simulate_format_is_identity_for_fp32() -> None:
+    rng = np.random.default_rng(2)
+    values = rng.normal(size=(8, 4)).astype(np.float32)
+    np.testing.assert_array_equal(simulate_format(values, NumericFormat.FP32), values)
+
+
+def test_simulate_format_error_ordering_follows_bit_width() -> None:
+    rng = np.random.default_rng(3)
+    values = rng.normal(size=(64, 64)).astype(np.float32)
+    errors = {
+        fmt: float(np.max(np.abs(simulate_format(values, fmt) - values)))
+        for fmt in (NumericFormat.BF16, NumericFormat.INT8, NumericFormat.INT4)
+    }
+    assert errors[NumericFormat.BF16] < errors[NumericFormat.INT8]
+    assert errors[NumericFormat.INT8] < errors[NumericFormat.INT4]
