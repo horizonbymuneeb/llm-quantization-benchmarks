@@ -322,3 +322,5 @@ if __name__ == '__main__':
 # Add support for 3-bit quantization [2026-04-09T17:20:30]
 
 # Implement dynamic bit-width selection [2026-04-12T19:03:58]
+
+# Vectorize dequantization kernel for speed [2026-04-12T12:25:23]
