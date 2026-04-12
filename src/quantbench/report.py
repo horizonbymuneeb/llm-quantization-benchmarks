@@ -206,3 +206,46 @@ def _diff(a: Any, b: Any) -> float | None:
     if a is None or b is None:
         return None
     return round(float(a) - float(b), 6)
+
+
+def export_csv(report: dict[str, Any], path: str | Path) -> Path:
+    """Flatten the report rows into a CSV file for spreadsheet inspection.
+
+    Written by hand rather than with a dataframe dependency so the project keeps
+    its minimal requirements list.
+    """
+    out = Path(path)
+    columns = [
+        "label",
+        "format",
+        "scheme",
+        "granularity",
+        "compression_ratio",
+        "accuracy",
+        "accuracy_delta",
+        "flip_rate",
+        "net_flips",
+        "spearman_global",
+        "kendall_global",
+        "mean_weight_rmse",
+    ]
+    lines = [",".join(columns)]
+    for row in report.get("rows", []):
+        values = [
+            row.get("label", ""),
+            row.get("format", ""),
+            row.get("scheme", ""),
+            row.get("granularity", ""),
+            row.get("compression_ratio", ""),
+            row.get("accuracy", {}).get("candidate_accuracy", ""),
+            row.get("accuracy", {}).get("accuracy_delta", ""),
+            row.get("churn", {}).get("flip_rate", ""),
+            row.get("churn", {}).get("net_flips", ""),
+            row.get("rank", {}).get("spearman_global", ""),
+            row.get("rank", {}).get("kendall_global", ""),
+            row.get("weight_error", {}).get("mean_rmse", ""),
+        ]
+        lines.append(",".join(str(v) for v in values))
+    out.parent.mkdir(parents=True, exist_ok=True)
+    out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+    return out

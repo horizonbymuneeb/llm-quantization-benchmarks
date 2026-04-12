@@ -158,3 +158,28 @@ def test_storage_bytes_handles_int4_nibble_packing() -> None:
     assert storage_bytes((10,), NumericFormat.BF16) == 20
     assert storage_bytes((10,), NumericFormat.FP32) == 40
     assert storage_bytes((), NumericFormat.FP32) == 4
+
+
+def test_compression_ratio_is_exact_for_power_of_two_formats() -> None:
+    shape = (64, 32)
+    assert compression_ratio(shape, NumericFormat.BF16) == pytest.approx(2.0)
+    assert compression_ratio(shape, NumericFormat.INT8) == pytest.approx(4.0)
+    assert compression_ratio(shape, NumericFormat.INT4) == pytest.approx(8.0)
+    assert compression_ratio(shape, NumericFormat.FP32) == pytest.approx(1.0)
+
+
+def test_quant_error_stats_reports_zero_for_identical_tensors() -> None:
+    x = np.array([[1.0, -2.0], [0.0, 4.0]], dtype=np.float32)
+    stats = quant_error_stats(x, x.copy())
+    assert stats["max_abs"] == 0.0
+    assert stats["rmse"] == 0.0
+    assert stats["snr_db"] == float("inf")
+
+
+def test_quant_error_stats_matches_a_hand_computed_rmse() -> None:
+    ref = np.zeros((2, 2), dtype=np.float32)
+    cand = np.array([[3.0, 0.0], [0.0, 4.0]], dtype=np.float32)
+    stats = quant_error_stats(ref, cand)
+    assert stats["rmse"] == pytest.approx(float(np.sqrt((9.0 + 16.0) / 4.0)))
+    assert stats["max_abs"] == pytest.approx(4.0)
+    assert stats["mean_abs"] == pytest.approx(1.75)
