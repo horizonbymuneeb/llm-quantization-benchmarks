@@ -120,3 +120,98 @@ def layer_output_error(
     assert ref is not None and cand is not None
     denom = float(np.linalg.norm(ref)) or 1.0
     return float(np.linalg.norm(cand - ref) / denom)
+
+
+def single_layer_sensitivity(
+    params: MLPParams,
+    x_test: np.ndarray,
+    y_test: np.ndarray,
+    fmt: NumericFormat,
+    activation: str = "relu",
+    scheme: str = "symmetric",
+    granularity: str = "per_channel",
+) -> list[LayerSensitivity]:
+    """Quantise each layer alone and record the resulting accuracy drop.
+
+    This is the O(n_layers) sweep that produces the ranking.  Layers are
+    reported in index order; ranking is a separate function because callers
+    sometimes want the original order.
+    """
+    baseline = _accuracy_of(params, x_test, y_test, activation)
+    results: list[LayerSensitivity] = []
+    for i in range(params.n_layers):
+        quantised = quantise_one_layer(params, i, fmt, scheme, granularity)
+        acc = _accuracy_of(quantised, x_test, y_test, activation)
+        w_err = quantization_error(params.weights[i], quantised.weights[i])
+        results.append(
+            LayerSensitivity(
+                layer=f"layers.{i}.weight",
+                index=i,
+                fmt=fmt,
+                accuracy=acc,
+                accuracy_drop=baseline - acc,
+                output_relative_error=layer_output_error(
+                    params, quantised, x_test, i, activation
+                ),
+                weight_rmse=w_err["rmse"],
+                weight_cosine_distance=w_err["cosine_distance"],
+                n_parameters=int(params.weights[i].size),
+            )
+        )
+    return results
+
+
+def rank_layers(
+    results: list[LayerSensitivity],
+    by: str = "output_relative_error",
+) -> list[LayerSensitivity]:
+    """Sort layers most-sensitive first.
+
+    ``output_relative_error`` is the default ranking key because accuracy drop
+    is quantised into steps of ``1/n_test`` and often ties across layers, while
+    the output error is continuous and therefore ranks stably.
+    """
+    if not results:
+        return []
+    key = by if by in results[0].as_dict() else "output_relative_error"
+    return sorted(results, key=lambda r: float(getattr(r, key)), reverse=True)
+
+
+def cumulative_sensitivity(
+    params: MLPParams,
+    x_test: np.ndarray,
+    y_test: np.ndarray,
+    fmt: NumericFormat,
+    activation: str = "relu",
+    scheme: str = "symmetric",
+    granularity: str = "per_channel",
+) -> list[dict[str, float | int | str]]:
+    """Accuracy after quantising layers ``0..k`` for every ``k``.
+
+    The increments between consecutive points are what reveal accumulation: if
+    quantising layer 3 alone costs 0.5 points but quantising 0..3 costs 4
+    points, the damage is interaction between layers, not any single layer.
+    """
+    baseline = _accuracy_of(params, x_test, y_test, activation)
+    curve: list[dict[str, float | int | str]] = [
+        {"n_layers_quantised": 0, "accuracy": baseline, "incremental_drop": 0.0}
+    ]
+    running = params.copy()
+    previous = baseline
+    for i in range(params.n_layers):
+        quantised, _ = quantize_tensor(
+            running.weights[i], fmt=fmt, scheme=scheme, granularity=granularity, axis=0
+        )
+        running.weights[i] = quantised
+        acc = _accuracy_of(running, x_test, y_test, activation)
+        curve.append(
+            {
+                "n_layers_quantised": i + 1,
+                "layer": f"layers.{i}.weight",
+                "accuracy": acc,
+                "incremental_drop": previous - acc,
+                "cumulative_drop": baseline - acc,
+            }
+        )
+        previous = acc
+    return curve
