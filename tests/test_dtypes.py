@@ -205,3 +205,8 @@ def test_simulate_format_error_ordering_follows_bit_width() -> None:
     }
     assert errors[NumericFormat.BF16] < errors[NumericFormat.INT8]
     assert errors[NumericFormat.INT8] < errors[NumericFormat.INT4]
+
+
+def test_simulate_format_of_zeros_stays_zero_for_integer_formats() -> None:
+    zeros = np.zeros((4, 4), dtype=np.float32)
+    np.testing.assert_array_equal(simulate_format(zeros, NumericFormat.INT8), zeros)
