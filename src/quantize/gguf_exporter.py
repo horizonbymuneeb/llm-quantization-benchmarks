@@ -324,3 +324,5 @@ if __name__ == '__main__':
 # Implement dynamic bit-width selection [2026-04-12T19:03:58]
 
 # Vectorize dequantization kernel for speed [2026-04-12T12:25:23]
+
+# Add benchmarking for Mistral models [2026-04-16T17:00:56]
