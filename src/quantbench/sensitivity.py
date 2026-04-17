@@ -215,3 +215,90 @@ def cumulative_sensitivity(
         )
         previous = acc
     return curve
+
+
+def format_sensitivity(
+    params: MLPParams,
+    x_test: np.ndarray,
+    y_test: np.ndarray,
+    formats: tuple[NumericFormat, ...],
+    activation: str = "relu",
+    layer_index: int = 0,
+) -> list[dict[str, object]]:
+    """Hold one layer fixed and vary the storage format.
+
+    This is the "what does width alone cost" probe: scheme and granularity are
+    fixed at their simplest settings so the only variable is the number of bits.
+    """
+    if not 0 <= layer_index < params.n_layers:
+        raise IndexError(f"layer_index {layer_index} out of range")
+    baseline = _accuracy_of(params, x_test, y_test, activation)
+    rows: list[dict[str, object]] = []
+    for fmt in formats:
+        quantised = params.copy()
+        quantised.weights[layer_index] = simulate_format(params.weights[layer_index], fmt)
+        acc = _accuracy_of(quantised, x_test, y_test, activation)
+        rows.append(
+            {
+                "format": fmt.value,
+                "accuracy": round(acc, 6),
+                "accuracy_drop": round(baseline - acc, 6),
+                "weight_rmse": round(
+                    quantization_error(
+                        params.weights[layer_index], quantised.weights[layer_index]
+                    )["rmse"],
+                    8,
+                ),
+            }
+        )
+    return rows
+
+
+def parameter_share(params: MLPParams) -> list[dict[str, object]]:
+    """Fraction of *all* parameters held by each weight matrix.
+
+    The denominator includes the bias vectors, so the shares sum to just under
+    1.0 and the remainder is the biases.  That is the honest accounting: a
+    sensitivity ranking is only actionable next to the size of each layer, and a
+    sensitive layer holding 2% of the parameters can stay in float while the
+    rest is compressed.
+    """
+    total = max(params.total_parameters(), 1)
+    rows: list[dict[str, object]] = []
+    for i, w in enumerate(params.weights):
+        n = int(w.size)
+        rows.append(
+            {
+                "layer": f"layers.{i}.weight",
+                "index": i,
+                "n_parameters": n,
+                "share": round(n / total, 6),
+                "share_of_weights": round(n / max(sum(w.size for w in params.weights), 1), 6),
+                "shape": list(w.shape),
+            }
+        )
+    return rows
+
+
+def recommend_mixed_precision(
+    ranked: list[LayerSensitivity],
+    top_k: int,
+    sensitive_format: NumericFormat = NumericFormat.BF16,
+    default_format: NumericFormat = NumericFormat.INT8,
+) -> dict[str, object]:
+    """Suggest keeping the ``top_k`` most sensitive layers at a wider format.
+
+    This is a recommendation derived from measured sensitivity, not a claim
+    that the mixed-precision assignment is optimal — an exhaustive search over
+    assignments is exponential in the number of layers.  The caller can evaluate
+    the suggestion with :func:`apply_mixed_precision`.
+    """
+    if top_k < 0:
+        raise ValueError("top_k must be non-negative")
+    keep = {r.index for r in ranked[:top_k]}
+    return {
+        "sensitive_layers": sorted(keep),
+        "sensitive_format": sensitive_format.value,
+        "default_format": default_format.value,
+        "n_layers_wide": len(keep),
+    }
