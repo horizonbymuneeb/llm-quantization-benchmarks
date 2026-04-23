@@ -455,3 +455,5 @@ if __name__ == '__main__':
 # Add benchmarking for Mistral models [2026-04-07T18:07:22]
 
 # Implement per-layer quantization sensitivity analysis [2026-04-12T18:24:19]
+
+# Fix race condition in parallel calibration [2026-04-23T19:26:18]
