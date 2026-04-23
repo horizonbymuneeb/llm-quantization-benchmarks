@@ -302,3 +302,48 @@ def recommend_mixed_precision(
         "default_format": default_format.value,
         "n_layers_wide": len(keep),
     }
+
+
+def apply_mixed_precision(
+    params: MLPParams,
+    assignment: dict[str, object],
+    scheme: str = "symmetric",
+    granularity: str = "per_channel",
+) -> MLPParams:
+    """Quantise a model according to a mixed-precision assignment.
+
+    The assignment is the dict produced by
+    :func:`recommend_mixed_precision`; layers listed in ``sensitive_layers``
+    get ``sensitive_format`` and everything else gets ``default_format``.
+    """
+    sensitive = set(int(i) for i in assignment.get("sensitive_layers", []))  # type: ignore[union-attr]
+    wide = NumericFormat.from_string(str(assignment["sensitive_format"]))
+    narrow = NumericFormat.from_string(str(assignment["default_format"]))
+    out = params.copy()
+    for i in range(params.n_layers):
+        fmt = wide if i in sensitive else narrow
+        quantised, _ = quantize_tensor(
+            params.weights[i],
+            fmt=fmt,
+            scheme=scheme,
+            granularity=granularity,
+            axis=0,
+        )
+        out.weights[i] = quantised
+    return out
+
+
+def sensitivity_summary(ranked: list[LayerSensitivity]) -> dict[str, object]:
+    """Compact digest of a sensitivity sweep for the report header."""
+    if not ranked:
+        return {"n_layers": 0, "most_sensitive": None, "least_sensitive": None}
+    drops = [r.accuracy_drop for r in ranked]
+    return {
+        "n_layers": len(ranked),
+        "most_sensitive": ranked[0].as_dict(),
+        "least_sensitive": ranked[-1].as_dict(),
+        "max_drop": max(drops),
+        "min_drop": min(drops),
+        "mean_drop": float(np.mean(drops)),
+        "n_layers_with_zero_drop": int(sum(1 for d in drops if abs(d) < 1e-12)),
+    }
