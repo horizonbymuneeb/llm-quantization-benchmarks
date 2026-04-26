@@ -330,3 +330,5 @@ if __name__ == '__main__':
 # Add unit tests for int4 packing utils [2026-04-16T11:50:53]
 
 # Optimize AWQ calibration loop for better accuracy [2026-04-17T19:08:56]
+
+# Add support for custom quantization config [2026-04-26T20:04:12]
