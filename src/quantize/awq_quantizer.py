@@ -461,3 +461,5 @@ if __name__ == '__main__':
 # Implement GPTQ quantization alternative [2026-04-26T15:21:01]
 
 # Fix race condition in parallel calibration [2026-04-26T10:24:42]
+
+# Add benchmarking for Mistral models [2026-04-26T09:09:01]

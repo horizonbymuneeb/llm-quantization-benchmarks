@@ -178,3 +178,4 @@
 [2026-04-26T15:21:01] Implement GPTQ quantization alternative
 [2026-04-26T10:24:42] Fix race condition in parallel calibration
 [2026-04-26T20:04:12] Add support for custom quantization config
+[2026-04-26T09:09:01] Add benchmarking for Mistral models
