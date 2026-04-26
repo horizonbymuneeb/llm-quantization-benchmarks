@@ -68,3 +68,55 @@ class QuantizedModel:
         from .dtypes import storage_bytes
 
         return sum(storage_bytes(w.shape, self.format) for w in self.params.weights)
+
+
+@dataclass
+class SweepRow:
+    """One configuration's measured result, ready to serialise."""
+
+    label: str
+    format: str
+    scheme: str
+    granularity: str
+    compression_ratio: float
+    mean_weight_rmse: float
+    max_weight_rmse: float
+    accuracy: dict[str, float]
+    churn: dict[str, float]
+    confidence: dict[str, float]
+    margin: dict[str, float]
+    rank: dict[str, float]
+    calibration_error: dict[str, float]
+    layer_errors: dict[str, float]
+    scale_spread: dict[str, float]
+    per_class_candidate: dict[str, float] = field(default_factory=dict)
+
+    def as_dict(self) -> dict[str, Any]:
+        """Flatten to a JSON-friendly dict, rounding floats for readability."""
+        return {
+            "label": self.label,
+            "format": self.format,
+            "scheme": self.scheme,
+            "granularity": self.granularity,
+            "compression_ratio": round(self.compression_ratio, 4),
+            "weight_error": {
+                "mean_rmse": round(self.mean_weight_rmse, 8),
+                "max_rmse": round(self.max_weight_rmse, 8),
+                "per_layer": {k: round(v, 8) for k, v in self.layer_errors.items()},
+            },
+            "accuracy": {k: _round(v) for k, v in self.accuracy.items()},
+            "churn": {k: _round(v) for k, v in self.churn.items()},
+            "confidence": {k: _round(v) for k, v in self.confidence.items()},
+            "margin": {k: _round(v) for k, v in self.margin.items()},
+            "rank": {k: _round(v) for k, v in self.rank.items()},
+            "calibration_error": {k: _round(v) for k, v in self.calibration_error.items()},
+            "scale_spread": {k: _round(v) for k, v in self.scale_spread.items()},
+            "per_class_candidate": {k: _round(v) for k, v in self.per_class_candidate.items()},
+        }
+
+
+def _round(value: float, digits: int = 6) -> float:
+    """Round a float, passing NaN and infinities through unchanged."""
+    if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
+        return value
+    return round(float(value), digits)
