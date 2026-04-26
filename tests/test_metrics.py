@@ -65,3 +65,27 @@ def test_confusion_matrix_places_counts_on_true_then_predicted() -> None:
     assert matrix[1, 1] == 1
     assert matrix[2, 2] == 1
     assert int(matrix.sum()) == 4
+
+
+def test_confusion_matrix_rejects_mismatched_shapes() -> None:
+    with pytest.raises(ValueError, match="same shape"):
+        confusion_matrix(np.zeros(3, dtype=np.int64), np.zeros(4, dtype=np.int64), 2)
+
+
+def test_accuracy_delta_is_signed_candidate_minus_reference() -> None:
+    ref = _onehot_predictions([0, 1, 2, 0])
+    cand = _onehot_predictions([0, 1, 2, 1])
+    labels = np.array([0, 1, 2, 0])
+    delta = accuracy_delta(ref, cand, labels)
+    assert delta["reference_accuracy"] == pytest.approx(1.0)
+    assert delta["candidate_accuracy"] == pytest.approx(0.75)
+    assert delta["accuracy_delta"] == pytest.approx(-0.25)
+
+
+def test_accuracy_delta_relative_is_nan_when_reference_is_zero() -> None:
+    ref = _onehot_predictions([1, 1])
+    cand = _onehot_predictions([0, 1])
+    labels = np.array([0, 0])
+    delta = accuracy_delta(ref, cand, labels)
+    assert delta["reference_accuracy"] == 0.0
+    assert np.isnan(delta["relative_delta"])

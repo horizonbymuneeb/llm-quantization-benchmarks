@@ -120,3 +120,109 @@ def _round(value: float, digits: int = 6) -> float:
     if isinstance(value, float) and (np.isnan(value) or np.isinf(value)):
         return value
     return round(float(value), digits)
+
+
+@dataclass
+class SweepResult:
+    """Everything one sweep produced: rows, baseline, and diagnostics."""
+
+    rows: list[SweepRow]
+    baseline_accuracy: float
+    history: TrainHistory
+    dataset: Dataset
+    layer_parameter_share: list[dict[str, object]]
+    sensitivity: dict[str, Any]
+    cumulative: list[dict[str, Any]]
+    mixed_precision: dict[str, Any] | None
+    calibration: dict[str, Any]
+    reference_accuracy: float
+
+    def worst_row(self, by: str = "accuracy_delta") -> dict[str, Any] | None:
+        """The row with the largest accuracy regression."""
+        if not self.rows:
+            return None
+        worst = min(self.rows, key=lambda r: r.accuracy.get(by, 0.0))
+        return worst.as_dict()
+
+    def best_row(self, by: str = "accuracy_delta") -> dict[str, Any] | None:
+        """The row with the best accuracy, breaking ties on compression ratio."""
+        if not self.rows:
+            return None
+        best = max(self.rows, key=lambda r: (r.accuracy.get(by, 0.0), r.compression_ratio))
+        return best.as_dict()
+
+    def churn_outliers(self, threshold: float = 0.02) -> list[dict[str, Any]]:
+        """Rows where inputs flip far more often than the accuracy delta suggests.
+
+        These are the interesting cases: ``|accuracy_delta|`` is small but
+        ``flip_rate`` is large, meaning the model is trading correct answers for
+        correct answers while changing its behaviour.
+        """
+        out: list[dict[str, Any]] = []
+        for row in self.rows:
+            acc_delta = abs(row.accuracy.get("accuracy_delta", 0.0))
+            flip_rate = row.churn.get("flip_rate", 0.0)
+            if flip_rate > threshold and flip_rate > 5.0 * max(acc_delta, 1e-9):
+                out.append(
+                    {
+                        "label": row.label,
+                        "flip_rate": round(flip_rate, 6),
+                        "accuracy_delta": round(acc_delta, 6),
+                        "ratio": round(flip_rate / max(acc_delta, 1e-9), 2),
+                    }
+                )
+        return sorted(out, key=lambda r: r["ratio"], reverse=True)
+
+
+def quantize_model(
+    params: MLPParams,
+    fmt: NumericFormat,
+    scheme: str,
+    granularity: str,
+    seed: int | None = None,
+    quantize_biases: bool = False,
+) -> QuantizedModel:
+    """Quantise every weight matrix, optionally including the bias vectors.
+
+    Biases are left in float by default.  They are one vector per layer rather
+    than a matrix, so per-channel quantisation does not apply to them, and
+    including them confounds the attribution of damage to *weight* precision.
+    ``config.yaml``'s ``weight_layers_only`` controls this.
+    """
+    out = params.copy()
+    quant_params: dict[str, QuantParams] = {}
+    layer_stats: dict[str, dict[str, float]] = {}
+    for i, w in enumerate(params.weights):
+        quantised, qp, stats = quantize_layer_weights(
+            w, fmt=fmt, scheme=scheme, granularity=granularity, seed=seed
+        )
+        out.weights[i] = quantised
+        name = f"layers.{i}.weight"
+        quant_params[name] = qp
+        layer_stats[name] = stats
+    if quantize_biases:
+        for i, b in enumerate(params.biases):
+            quantised, qp, stats = quantize_layer_weights(
+                b, fmt=fmt, scheme=scheme, granularity="per_tensor", seed=seed
+            )
+            out.biases[i] = quantised
+            quant_params[f"layers.{i}.bias"] = qp
+            layer_stats[f"layers.{i}.bias"] = stats
+    return QuantizedModel(
+        params=out,
+        quant_params=quant_params,
+        layer_stats=layer_stats,
+        format=fmt,
+        scheme=scheme,
+        granularity=granularity,
+    )
+
+
+def evaluate_model(
+    params: MLPParams,
+    dataset: Dataset,
+    activation: str,
+) -> tuple[np.ndarray, float]:
+    """Return test probabilities and accuracy for a parameter set."""
+    probs, _ = forward(params, dataset.x_test, activation)
+    return probs, accuracy(probs, dataset.y_test)
