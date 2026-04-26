@@ -176,3 +176,4 @@
 [2026-04-17T19:08:56] Optimize AWQ calibration loop for better accuracy
 [2026-04-23T19:26:18] Fix race condition in parallel calibration
 [2026-04-26T15:21:01] Implement GPTQ quantization alternative
+[2026-04-26T10:24:42] Fix race condition in parallel calibration
