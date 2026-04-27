@@ -226,3 +226,81 @@ def evaluate_model(
     """Return test probabilities and accuracy for a parameter set."""
     probs, _ = forward(params, dataset.x_test, activation)
     return probs, accuracy(probs, dataset.y_test)
+
+
+def run_calibration(
+    config: SweepConfig,
+    params: MLPParams,
+    dataset: Dataset,
+) -> tuple[dict[str, CalibrationResult], dict[str, Any]]:
+    """Calibrate activation ranges on a held-out slice of the training data.
+
+    Only the *first* layer's input and each hidden layer's output are
+    calibrated; the output logits are not, because the softmax normalises them
+    and clipping there changes probabilities without changing the argmax.
+    """
+    x_cal, _ = calibration_subset(dataset, config.calibration.n_calibration_samples, config.calibration.seed)
+    _, cache = forward(params, x_cal, config.model.activation, record=True)
+    assert cache is not None
+    observations: dict[str, np.ndarray] = {"input": x_cal}
+    for i, post in enumerate(cache.post_activations):
+        observations[f"hidden_{i}"] = post
+    results: dict[str, CalibrationResult] = {}
+    for name, values in observations.items():
+        results[name] = calibrate(
+            values,
+            method=config.calibration.method,
+            percentile=config.calibration.percentile,
+            n_bins=config.calibration.n_bins,
+        )
+    summary = {
+        "method": config.calibration.method,
+        "n_calibration_samples": int(x_cal.shape[0]),
+        "layers": {name: res.as_dict() for name, res in results.items()},
+    }
+    return results, summary
+
+
+def run_sweep(config: SweepConfig) -> SweepResult:
+    """Train the reference model and evaluate every quantisation configuration."""
+    config.validate()
+    dataset = build_dataset(config.data)
+    params, history = build_and_train(
+        config.model,
+        dataset.n_features,
+        dataset.n_classes,
+        dataset.x_train,
+        dataset.y_train,
+        dataset.x_test,
+        dataset.y_test,
+    )
+    ref_probs, ref_acc = evaluate_model(params, dataset, config.model.activation)
+
+    rows: list[SweepRow] = []
+    for point in config.quant_grid():
+        rows.append(
+            _evaluate_point(config, point, params, dataset, ref_probs, ref_acc)
+        )
+
+    sensitivity_block: dict[str, Any] = {}
+    cumulative_block: list[dict[str, Any]] = []
+    mixed: dict[str, Any] | None = None
+    if config.include_sensitivity:
+        sensitivity_block, cumulative_block, mixed = _run_sensitivity(
+            config, params, dataset, ref_acc
+        )
+
+    _, calibration_summary = run_calibration(config, params, dataset)
+
+    return SweepResult(
+        rows=rows,
+        baseline_accuracy=ref_acc,
+        history=history,
+        dataset=dataset,
+        layer_parameter_share=parameter_share(params),
+        sensitivity=sensitivity_block,
+        cumulative=cumulative_block,
+        mixed_precision=mixed,
+        calibration=calibration_summary,
+        reference_accuracy=ref_acc,
+    )

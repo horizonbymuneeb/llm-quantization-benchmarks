@@ -89,3 +89,43 @@ def test_accuracy_delta_relative_is_nan_when_reference_is_zero() -> None:
     delta = accuracy_delta(ref, cand, labels)
     assert delta["reference_accuracy"] == 0.0
     assert np.isnan(delta["relative_delta"])
+
+
+def test_decision_churn_counts_every_flip() -> None:
+    ref = _onehot_predictions([0, 1, 2, 0, 1])
+    cand = _onehot_predictions([0, 1, 1, 2, 1])
+    labels = np.array([0, 1, 2, 0, 1])
+    record = PredictionRecord(ref, cand, labels)
+    churn = decision_churn(record)
+    assert churn["flip_count"] == 2
+    assert churn["flip_rate"] == pytest.approx(0.4)
+    assert churn["agreement_rate"] == pytest.approx(0.6)
+
+
+def test_decision_churn_separates_gained_lost_and_lateral_flips() -> None:
+    # labels      = [1, 1, 2, 0]
+    # row 0: ref 0 -> cand 1, wrong -> right   (gained)
+    # row 1: ref 1 -> cand 0, right -> wrong   (lost)
+    # row 2: ref 2 -> cand 2, right, no flip
+    # row 3: ref 0 -> cand 2, right -> wrong   (lost)
+    # A lateral flip (wrong -> differently wrong) is covered separately below.
+    ref = _onehot_predictions([0, 1, 2, 0])
+    cand = _onehot_predictions([1, 0, 2, 2])
+    labels = np.array([1, 1, 2, 0])
+    churn = decision_churn(PredictionRecord(ref, cand, labels))
+    assert churn["gained"] == 1
+    assert churn["lost"] == 2
+    assert churn["lateral"] == 0
+    assert churn["net_flips"] == -1
+    assert churn["flip_count"] == 3
+
+
+def test_decision_churn_counts_a_wrong_to_differently_wrong_flip_as_lateral() -> None:
+    # label is 2, ref says 0, cand says 1: still wrong, but a different answer.
+    ref = _onehot_predictions([0])
+    cand = _onehot_predictions([1])
+    churn = decision_churn(PredictionRecord(ref, cand, np.array([2])))
+    assert churn["lateral"] == 1
+    assert churn["gained"] == 0
+    assert churn["lost"] == 0
+    assert churn["net_flips"] == 0
