@@ -463,3 +463,5 @@ if __name__ == '__main__':
 # Fix race condition in parallel calibration [2026-04-26T10:24:42]
 
 # Add benchmarking for Mistral models [2026-04-26T09:09:01]
+
+# Fix zero-point calculation edge case [2026-04-27T15:33:15]
