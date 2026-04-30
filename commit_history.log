@@ -180,3 +180,4 @@
 [2026-04-26T20:04:12] Add support for custom quantization config
 [2026-04-26T09:09:01] Add benchmarking for Mistral models
 [2026-04-27T15:33:15] Fix zero-point calculation edge case
+[2026-04-30T15:53:15] Update benchmarking suite with new metrics
