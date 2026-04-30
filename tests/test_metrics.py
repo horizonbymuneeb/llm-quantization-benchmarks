@@ -129,3 +129,45 @@ def test_decision_churn_counts_a_wrong_to_differently_wrong_flip_as_lateral() ->
     assert churn["gained"] == 0
     assert churn["lost"] == 0
     assert churn["net_flips"] == 0
+
+
+def test_churn_exposes_flips_hidden_by_a_zero_accuracy_delta() -> None:
+    """The headline case: same accuracy, different behaviour.
+
+    This is the whole reason the metric exists.  Two flips cancel in accuracy
+    and the churn rate still reports them.
+    """
+    # labels [0, 0]: ref gets one right (row 0) and one wrong (row 1); cand
+    # swaps the pair, so exactly one answer is gained and one lost.  Accuracy is
+    # unchanged at 0.5 while every input changed its prediction.
+    ref = _onehot_predictions([0, 1])
+    cand = _onehot_predictions([1, 0])
+    labels = np.array([0, 0])
+    record = PredictionRecord(ref, cand, labels)
+    churn = decision_churn(record)
+    assert churn["accuracy_delta"] == pytest.approx(0.0)
+    assert churn["flip_count"] == 2
+    assert churn["flip_rate"] == pytest.approx(1.0)
+    assert churn["gained"] == 1
+    assert churn["lost"] == 1
+
+
+def test_identical_models_have_no_churn() -> None:
+    probs = _onehot_predictions([0, 1, 2])
+    record = PredictionRecord(probs, probs.copy(), np.array([0, 1, 2]))
+    churn = decision_churn(record)
+    assert churn["flip_rate"] == 0.0
+    assert churn["agreement_rate"] == 1.0
+
+
+def test_confidence_delta_reports_the_flipped_subset_separately() -> None:
+    ref = np.array([[0.9, 0.1], [0.55, 0.45], [0.7, 0.3]])
+    cand = np.array([[0.9, 0.1], [0.4, 0.6], [0.2, 0.8]])
+    labels = np.array([0, 1, 0])
+    stats = confidence_delta(PredictionRecord(ref, cand, labels))
+    # Reference top-1 confidences are 0.90, 0.55, 0.70; candidate ones are
+    # 0.90, 0.60, 0.80, so the signed deltas are 0.00, +0.05, +0.10.
+    assert stats["n_flipped"] == 2
+    assert stats["mean_delta"] == pytest.approx((0.0 + 0.05 + 0.10) / 3)
+    # Only rows 1 and 2 flipped; their absolute deltas are 0.05 and 0.10.
+    assert stats["flipped_mean_abs_delta"] == pytest.approx(0.075)

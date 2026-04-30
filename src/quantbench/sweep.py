@@ -304,3 +304,121 @@ def run_sweep(config: SweepConfig) -> SweepResult:
         calibration=calibration_summary,
         reference_accuracy=ref_acc,
     )
+
+
+def _evaluate_point(
+    config: SweepConfig,
+    point: QuantConfig,
+    params: MLPParams,
+    dataset: Dataset,
+    ref_probs: np.ndarray,
+    ref_acc: float,
+) -> SweepRow:
+    """Quantise at one configuration and assemble its report row."""
+    point.validate()
+    model = quantize_model(
+        params,
+        point.format,
+        point.scheme,
+        point.granularity,
+        seed=config.model.seed,
+        quantize_biases=not config.weight_layers_only,
+    )
+    cand_probs, cand_acc = evaluate_model(model.params, dataset, config.model.activation)
+    behaviour = compare_predictions(ref_probs, cand_probs, dataset.y_test, dataset.n_classes)
+
+    layer_errors = {
+        name: stats["rmse"] for name, stats in model.layer_stats.items()
+    }
+    rmse_values = list(layer_errors.values())
+    ratios = [
+        compression_ratio(w.shape, point.format) for w in params.weights
+    ]
+    return SweepRow(
+        label=point.label,
+        format=point.format.value,
+        scheme=point.scheme,
+        granularity=point.granularity,
+        compression_ratio=float(np.mean(ratios)),
+        mean_weight_rmse=float(np.mean(rmse_values)) if rmse_values else 0.0,
+        max_weight_rmse=float(np.max(rmse_values)) if rmse_values else 0.0,
+        accuracy=behaviour["accuracy"],  # type: ignore[arg-type]
+        churn=behaviour["churn"],  # type: ignore[arg-type]
+        confidence=behaviour["confidence"],  # type: ignore[arg-type]
+        margin=behaviour["margin"],  # type: ignore[arg-type]
+        rank=behaviour["rank"],  # type: ignore[arg-type]
+        calibration_error=behaviour["calibration_error"],  # type: ignore[arg-type]
+        layer_errors=layer_errors,
+        scale_spread=model.scale_spread(),
+        per_class_candidate=behaviour["per_class_candidate"],  # type: ignore[arg-type]
+    )
+
+
+def _run_sensitivity(
+    config: SweepConfig,
+    params: MLPParams,
+    dataset: Dataset,
+    ref_acc: float,
+) -> tuple[dict[str, Any], list[dict[str, Any]], dict[str, Any] | None]:
+    """Run per-layer, cumulative, and mixed-precision analysis.
+
+    Sensitivity is measured at INT8 because that is the format most deployments
+    actually use, so the ranking reflects a realistic decision rather than an
+    extreme one.
+    """
+    fmt = NumericFormat.INT8
+    per_layer = single_layer_sensitivity(
+        params,
+        dataset.x_test,
+        dataset.y_test,
+        fmt,
+        activation=config.model.activation,
+        granularity="per_channel",
+    )
+    ranked = rank_layers(per_layer)
+    cumulative = cumulative_sensitivity(
+        params,
+        dataset.x_test,
+        dataset.y_test,
+        fmt,
+        activation=config.model.activation,
+        granularity="per_channel",
+    )
+    block = {
+        "format": fmt.value,
+        "baseline_accuracy": round(ref_acc, 6),
+        "ranking": [r.as_dict() for r in ranked],
+        "summary": sensitivity_summary(ranked),
+    }
+    mixed: dict[str, Any] | None = None
+    if ranked:
+        assignment = recommend_mixed_precision(ranked, config.sensitivity_top_k)
+        mixed_params = apply_mixed_precision(params, assignment)
+        mixed_probs, mixed_acc = evaluate_model(mixed_params, dataset, config.model.activation)
+        mixed = {
+            "assignment": assignment,
+            "accuracy": round(mixed_acc, 6),
+            "accuracy_delta": round(mixed_acc - ref_acc, 6),
+            "reference_accuracy": round(ref_acc, 6),
+        }
+    return block, cumulative, mixed
+
+
+def row_delta_table(rows: list[SweepRow]) -> list[dict[str, Any]]:
+    """Sort rows by compression ratio and keep only the headline numbers.
+
+    This is what the CLI prints as a table; the full report keeps everything.
+    """
+    table: list[dict[str, Any]] = []
+    for row in sorted(rows, key=lambda r: r.compression_ratio):
+        table.append(
+            {
+                "label": row.label,
+                "compression": round(row.compression_ratio, 2),
+                "accuracy": round(row.accuracy.get("candidate_accuracy", 0.0), 4),
+                "delta": round(row.accuracy.get("accuracy_delta", 0.0), 4),
+                "flip_rate": round(row.churn.get("flip_rate", 0.0), 4),
+                "spearman": round(row.rank.get("spearman_global", float("nan")), 4),
+            }
+        )
+    return table
