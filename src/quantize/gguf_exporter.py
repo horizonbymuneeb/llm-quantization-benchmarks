@@ -332,3 +332,5 @@ if __name__ == '__main__':
 # Optimize AWQ calibration loop for better accuracy [2026-04-17T19:08:56]
 
 # Add support for custom quantization config [2026-04-26T20:04:12]
+
+# Implement dynamic bit-width selection [2026-05-01T16:37:10]
