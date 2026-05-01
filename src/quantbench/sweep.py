@@ -422,3 +422,40 @@ def row_delta_table(rows: list[SweepRow]) -> list[dict[str, Any]]:
             }
         )
     return table
+
+
+def aggregate_by_format(rows: list[SweepRow]) -> dict[str, dict[str, float]]:
+    """Average accuracy delta and churn per storage format.
+
+    Useful because the matrix has several rows per integer format; the per-row
+    numbers are noisy at test-set resolution, while the format average is not.
+    """
+    grouped: dict[str, list[SweepRow]] = {}
+    for row in rows:
+        grouped.setdefault(row.format, []).append(row)
+    out: dict[str, dict[str, float]] = {}
+    for fmt, group in grouped.items():
+        deltas = [r.accuracy.get("accuracy_delta", 0.0) for r in group]
+        flips = [r.churn.get("flip_rate", 0.0) for r in group]
+        out[fmt] = {
+            "n_configs": float(len(group)),
+            "mean_accuracy_delta": float(np.mean(deltas)),
+            "worst_accuracy_delta": float(np.min(deltas)),
+            "mean_flip_rate": float(np.mean(flips)),
+            "mean_compression": float(np.mean([r.compression_ratio for r in group])),
+        }
+    return out
+
+
+def weight_error_report(
+    reference: MLPParams,
+    candidate: MLPParams,
+) -> dict[str, float]:
+    """Tensor-level error between a reference and a quantised parameter set."""
+    merged: list[dict[str, float]] = []
+    for (_, ref), (_, cand) in zip(reference.named_tensors(), candidate.named_tensors()):
+        merged.append(quant_error_stats(ref, cand))
+    return {
+        key: float(np.mean([m[key] for m in merged])) if merged else 0.0
+        for key in ("max_abs", "mean_abs", "rmse", "relative_mean_abs")
+    }

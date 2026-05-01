@@ -171,3 +171,25 @@ def test_confidence_delta_reports_the_flipped_subset_separately() -> None:
     assert stats["mean_delta"] == pytest.approx((0.0 + 0.05 + 0.10) / 3)
     # Only rows 1 and 2 flipped; their absolute deltas are 0.05 and 0.10.
     assert stats["flipped_mean_abs_delta"] == pytest.approx(0.075)
+
+
+def test_margin_is_the_gap_between_the_top_two() -> None:
+    probs = np.array([[0.7, 0.2, 0.1], [0.5, 0.4, 0.1]])
+    np.testing.assert_allclose(margin(probs), [0.5, 0.1], atol=1e-9)
+
+
+def test_margin_of_a_single_class_problem_is_zero() -> None:
+    np.testing.assert_array_equal(margin(np.array([[1.0], [1.0]])), [0.0, 0.0])
+
+
+def test_margin_shift_reports_shrinkage() -> None:
+    ref = np.array([[0.9, 0.1], [0.8, 0.2]])
+    cand = np.array([[0.55, 0.45], [0.51, 0.49]])
+    record = PredictionRecord(ref, cand, np.array([0, 0]))
+    stats = margin_shift(record)
+    # Reference margins are 0.8 and 0.6; candidate margins are 0.10 and 0.02.
+    assert stats["reference_mean"] == pytest.approx(0.7)
+    assert stats["candidate_mean"] == pytest.approx(0.06)
+    # Per-row margin changes are -0.70 and -0.58; the worst is -0.70.
+    assert stats["max_shrinkage"] == pytest.approx(-0.70)
+    assert stats["n_below_zero"] == 0.0
