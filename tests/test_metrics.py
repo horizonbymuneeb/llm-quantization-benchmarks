@@ -193,3 +193,84 @@ def test_margin_shift_reports_shrinkage() -> None:
     # Per-row margin changes are -0.70 and -0.58; the worst is -0.70.
     assert stats["max_shrinkage"] == pytest.approx(-0.70)
     assert stats["n_below_zero"] == 0.0
+
+
+def test_spearman_of_a_perfectly_monotone_pair_is_one() -> None:
+    a = np.array([1.0, 2.0, 3.0, 4.0])
+    assert spearman_correlation(a, a * 3.0 + 1.0) == pytest.approx(1.0)
+
+
+def test_spearman_of_a_reversed_pair_is_minus_one() -> None:
+    a = np.array([1.0, 2.0, 3.0, 4.0])
+    assert spearman_correlation(a, -a) == pytest.approx(-1.0)
+
+
+def test_spearman_handles_ties_with_average_ranks() -> None:
+    a = np.array([1.0, 1.0, 2.0, 3.0])
+    b = np.array([1.0, 2.0, 2.0, 3.0])
+    value = spearman_correlation(a, b)
+    assert -1.0 <= value <= 1.0
+    assert value > 0.0
+
+
+def test_spearman_returns_nan_for_a_constant_series() -> None:
+    assert np.isnan(spearman_correlation(np.ones(5), np.arange(5.0)))
+
+
+def test_spearman_returns_nan_below_two_points() -> None:
+    assert np.isnan(spearman_correlation(np.array([1.0]), np.array([2.0])))
+
+
+def test_spearman_rejects_a_length_mismatch() -> None:
+    with pytest.raises(ValueError, match="length mismatch"):
+        spearman_correlation(np.arange(3.0), np.arange(4.0))
+
+
+def test_kendall_tau_of_a_perfectly_concordant_pair_is_one() -> None:
+    a = np.array([1.0, 2.0, 3.0, 4.0])
+    assert kendall_tau(a, a) == pytest.approx(1.0)
+
+
+def test_kendall_tau_of_a_reversed_pair_is_minus_one() -> None:
+    a = np.array([1.0, 2.0, 3.0, 4.0])
+    assert kendall_tau(a, -a) == pytest.approx(-1.0)
+
+
+def test_kendall_tau_matches_a_hand_counted_example() -> None:
+    # Pairs: (1,2)->concordant, (1,3)->discordant, (2,3)->concordant.
+    a = np.array([1.0, 2.0, 3.0])
+    b = np.array([1.0, 3.0, 2.0])
+    # concordant 2, discordant 1 -> (2-1)/3
+    assert kendall_tau(a, b) == pytest.approx(1.0 / 3.0)
+
+
+def test_rank_agreement_reports_global_and_per_class_numbers() -> None:
+    rng = np.random.default_rng(0)
+    n = 60
+    labels = rng.integers(0, 3, size=n)
+    ref = rng.dirichlet(np.ones(3), size=n)
+    # A slightly perturbed candidate: the ordering mostly survives.
+    cand = ref + rng.normal(0.0, 0.01, size=ref.shape)
+    cand = np.clip(cand, 1e-6, None)
+    cand /= cand.sum(axis=1, keepdims=True)
+    stats = confidence_rank_agreement(PredictionRecord(ref, cand, labels))
+    assert stats["spearman_global"] > 0.5
+    assert stats["kendall_global"] > 0.3
+    assert 0.0 <= stats["spearman_argmax_agreement"] <= 1.0
+    assert -1.0 <= stats["spearman_class_mean"] <= 1.0
+
+
+def test_expected_calibration_error_is_zero_for_a_perfectly_calibrated_model() -> None:
+    # One row per bin, each predicting its bin's midpoint confidence and being
+    # right exactly that often is hard to construct, so use the trivial case:
+    # all rows correct with confidence 1.0.
+    probs = np.array([[1.0, 0.0], [1.0, 0.0]])
+    labels = np.array([0, 0])
+    assert expected_calibration_error(probs, labels, n_bins=10) == pytest.approx(0.0)
+
+
+def test_expected_calibration_error_is_large_for_a_confidently_wrong_model() -> None:
+    probs = np.array([[0.95, 0.05], [0.95, 0.05]])
+    labels = np.array([1, 1])
+    ece = expected_calibration_error(probs, labels, n_bins=10)
+    assert ece == pytest.approx(0.95, abs=1e-6)
