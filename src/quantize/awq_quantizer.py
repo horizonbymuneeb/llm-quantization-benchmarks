@@ -467,3 +467,5 @@ if __name__ == '__main__':
 # Fix zero-point calculation edge case [2026-04-27T15:33:15]
 
 # Update benchmarking suite with new metrics [2026-04-30T15:53:15]
+
+# Vectorize dequantization kernel for speed [2026-05-07T18:55:51]
