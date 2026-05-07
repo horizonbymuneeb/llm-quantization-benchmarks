@@ -274,3 +274,51 @@ def test_expected_calibration_error_is_large_for_a_confidently_wrong_model() -> 
     labels = np.array([1, 1])
     ece = expected_calibration_error(probs, labels, n_bins=10)
     assert ece == pytest.approx(0.95, abs=1e-6)
+
+
+def test_expected_calibration_error_rejects_a_bad_bin_count() -> None:
+    with pytest.raises(ValueError, match="n_bins must be positive"):
+        expected_calibration_error(np.array([[0.5, 0.5]]), np.array([0]), n_bins=0)
+
+
+def test_prediction_record_validates_its_inputs() -> None:
+    with pytest.raises(ValueError, match="must be 2-D"):
+        PredictionRecord(np.zeros(3), np.zeros((3, 2)), np.zeros(3, dtype=np.int64))
+    with pytest.raises(ValueError, match="shape mismatch"):
+        PredictionRecord(np.zeros((3, 2)), np.zeros((3, 3)), np.zeros(3, dtype=np.int64))
+    with pytest.raises(ValueError, match="label count"):
+        PredictionRecord(np.zeros((3, 2)), np.zeros((3, 2)), np.zeros(4, dtype=np.int64))
+    with pytest.raises(ValueError, match="labels out of range"):
+        PredictionRecord(np.zeros((2, 2)), np.zeros((2, 2)), np.array([0, 5], dtype=np.int64))
+
+
+def test_prediction_record_derived_properties() -> None:
+    ref = _onehot_predictions([0, 1])
+    cand = _onehot_predictions([1, 1])
+    record = PredictionRecord(ref, cand, np.array([0, 1]))
+    assert record.n_samples == 2
+    np.testing.assert_array_equal(record.reference_pred, [0, 1])
+    np.testing.assert_array_equal(record.candidate_pred, [1, 1])
+    assert record.reference_confidence[0] == pytest.approx(0.98)
+
+
+def test_compare_predictions_returns_every_block() -> None:
+    ref = _onehot_predictions([0, 1, 2])
+    cand = _onehot_predictions([0, 2, 2])
+    labels = np.array([0, 1, 2])
+    out = compare_predictions(ref, cand, labels)
+    assert set(out) >= {
+        "accuracy",
+        "churn",
+        "confidence",
+        "margin",
+        "rank",
+        "calibration_error",
+        "per_class_reference",
+        "per_class_candidate",
+        "confusion_reference",
+        "confusion_candidate",
+    }
+    # ref is fully correct; cand mislabels row 1, so accuracy drops by 1/3.
+    assert out["accuracy"]["accuracy_delta"] == pytest.approx(-1.0 / 3.0)  # type: ignore[index]
+    assert out["churn"]["flip_count"] == 1  # type: ignore[index]
