@@ -336,3 +336,5 @@ if __name__ == '__main__':
 # Implement dynamic bit-width selection [2026-05-01T16:37:10]
 
 # Validate models on Wikitext dataset [2026-05-04T13:52:48]
+
+# Add support for 3-bit quantization [2026-05-07T10:41:39]
