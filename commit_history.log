@@ -185,3 +185,4 @@
 [2026-05-04T13:52:48] Validate models on Wikitext dataset
 [2026-05-07T18:55:51] Vectorize dequantization kernel for speed
 [2026-05-07T10:41:39] Add support for 3-bit quantization
+[2026-05-08T13:08:21] Fix INT4 overflow in weight quantization
