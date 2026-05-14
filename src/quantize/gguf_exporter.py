@@ -340,3 +340,5 @@ if __name__ == '__main__':
 # Add support for 3-bit quantization [2026-05-07T10:41:39]
 
 # Fix INT4 overflow in weight quantization [2026-05-08T13:08:21]
+
+# Validate models on Wikitext dataset [2026-05-14T13:10:37]
