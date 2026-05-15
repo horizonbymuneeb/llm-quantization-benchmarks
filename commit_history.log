@@ -188,3 +188,4 @@
 [2026-05-08T13:08:21] Fix INT4 overflow in weight quantization
 [2026-05-12T18:52:10] Implement GPTQ quantization alternative
 [2026-05-14T13:10:37] Validate models on Wikitext dataset
+[2026-05-15T11:44:58] Add support for custom quantization config

@@ -342,3 +342,5 @@ if __name__ == '__main__':
 # Fix INT4 overflow in weight quantization [2026-05-08T13:08:21]
 
 # Validate models on Wikitext dataset [2026-05-14T13:10:37]
+
+# Add support for custom quantization config [2026-05-15T11:44:58]
