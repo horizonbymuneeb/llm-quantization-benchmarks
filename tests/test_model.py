@@ -283,3 +283,14 @@ def test_predict_and_predict_proba_agree() -> None:
 def test_layer_names_describe_the_shapes() -> None:
     params = init_params([12, 8, 3], seed=0)
     assert layer_names(params) == ["layer0_8x12", "layer1_3x8"]
+
+
+def test_history_as_dict_rounds_floats() -> None:
+    rng = np.random.default_rng(10)
+    x = rng.normal(size=(32, 3)).astype(np.float32)
+    y = rng.integers(0, 2, size=32)
+    params = init_params([3, 4, 2], seed=0)
+    history = train(params, x, y, ModelConfig(hidden_sizes=(4,), epochs=2, batch_size=16, seed=0))
+    payload = history.as_dict()
+    assert len(payload["train_loss"]) == 2
+    assert all(isinstance(v, float) for v in payload["train_loss"])
