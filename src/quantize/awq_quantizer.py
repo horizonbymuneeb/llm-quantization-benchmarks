@@ -471,3 +471,5 @@ if __name__ == '__main__':
 # Vectorize dequantization kernel for speed [2026-05-07T18:55:51]
 
 # Implement GPTQ quantization alternative [2026-05-12T18:52:10]
+
+# Implement dynamic bit-width selection [2026-05-16T15:49:14]

@@ -189,3 +189,4 @@
 [2026-05-12T18:52:10] Implement GPTQ quantization alternative
 [2026-05-14T13:10:37] Validate models on Wikitext dataset
 [2026-05-15T11:44:58] Add support for custom quantization config
+[2026-05-16T15:49:14] Implement dynamic bit-width selection
