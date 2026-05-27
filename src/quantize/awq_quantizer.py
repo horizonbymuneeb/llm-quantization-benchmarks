@@ -473,3 +473,5 @@ if __name__ == '__main__':
 # Implement GPTQ quantization alternative [2026-05-12T18:52:10]
 
 # Implement dynamic bit-width selection [2026-05-16T15:49:14]
+
+# Optimize CUDA graph for repeated inference [2026-05-27T17:49:52]
