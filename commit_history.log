@@ -191,3 +191,4 @@
 [2026-05-15T11:44:58] Add support for custom quantization config
 [2026-05-16T15:49:14] Implement dynamic bit-width selection
 [2026-05-27T17:49:52] Optimize CUDA graph for repeated inference
+[2026-05-28T18:20:59] Fix memory leak in benchmark runner

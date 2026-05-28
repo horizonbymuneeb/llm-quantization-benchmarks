@@ -344,3 +344,5 @@ if __name__ == '__main__':
 # Validate models on Wikitext dataset [2026-05-14T13:10:37]
 
 # Add support for custom quantization config [2026-05-15T11:44:58]
+
+# Fix memory leak in benchmark runner [2026-05-28T18:20:59]
