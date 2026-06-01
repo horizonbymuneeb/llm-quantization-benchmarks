@@ -212,3 +212,49 @@ def test_quantization_error_detects_a_direction_change() -> None:
 def test_quantization_error_rejects_a_shape_mismatch() -> None:
     with pytest.raises(ValueError, match="shape mismatch"):
         quantization_error(np.zeros((2, 2)), np.zeros((3,)))
+
+
+def test_effective_bits_matches_the_payload_width() -> None:
+    weights = np.zeros((64, 64), dtype=np.float32)
+    assert effective_bits(weights, NumericFormat.FP32) == pytest.approx(32.0)
+    assert effective_bits(weights, NumericFormat.INT8) == pytest.approx(8.0)
+    assert effective_bits(weights, NumericFormat.INT4) == pytest.approx(4.0)
+
+
+def test_quantize_layer_weights_includes_the_diagnostic_keys() -> None:
+    rng = np.random.default_rng(9)
+    weights = rng.normal(size=(16, 8)).astype(np.float32)
+    out, params, stats = quantize_layer_weights(
+        weights, NumericFormat.INT8, "symmetric", "per_channel"
+    )
+    assert out.shape == weights.shape
+    assert params.n_channels == 16
+    assert set(stats) >= {"rmse", "max_abs", "cosine", "effective_bits"}
+    assert 0.0 <= stats["cosine"] <= 1.0
+
+
+def test_quant_params_as_dict_is_json_safe() -> None:
+    weights = np.array([[1.0, 2.0], [3.0, 4.0]], dtype=np.float32)
+    params = symmetric_params(weights, NumericFormat.INT8, "per_channel")
+    payload = params.as_dict()
+    assert payload["format"] == "int8"
+    assert payload["n_channels"] == 2
+    assert isinstance(payload["scale_min"], float)
+
+
+def test_per_tensor_error_exceeds_per_channel_on_uneven_rows() -> None:
+    # Row 0 has a huge dynamic range, row 1 is tiny.  A single scale must cover
+    # the huge row, so the tiny row collapses to zero.
+    weights = np.zeros((2, 64), dtype=np.float32)
+    weights[0] = np.linspace(-50.0, 50.0, 64)
+    weights[1] = np.linspace(-0.01, 0.01, 64)
+    per_tensor = apply_params(
+        weights, symmetric_params(weights, NumericFormat.INT8, "per_tensor")
+    )
+    per_channel = apply_params(
+        weights, symmetric_params(weights, NumericFormat.INT8, "per_channel", axis=0)
+    )
+    tiny_row_tensor = np.abs(per_tensor[1] - weights[1]).mean()
+    tiny_row_channel = np.abs(per_channel[1] - weights[1]).mean()
+    assert tiny_row_channel < tiny_row_tensor
+    assert tiny_row_channel < 1e-3
