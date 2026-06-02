@@ -346,3 +346,5 @@ if __name__ == '__main__':
 # Add support for custom quantization config [2026-05-15T11:44:58]
 
 # Fix memory leak in benchmark runner [2026-05-28T18:20:59]
+
+# Vectorize dequantization kernel for speed [2026-06-02T09:39:42]
