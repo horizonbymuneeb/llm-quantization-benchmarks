@@ -92,3 +92,87 @@ def test_run_sweep_is_deterministic(config: SweepConfig, result) -> None:
     assert [row.accuracy["accuracy_delta"] for row in again.rows] == [
         row.accuracy["accuracy_delta"] for row in result.rows
     ]
+
+
+def test_worst_row_is_at_least_as_bad_as_the_best_row(result) -> None:
+    worst = result.worst_row()
+    best = result.best_row()
+    assert worst is not None and best is not None
+    assert worst["accuracy"]["accuracy_delta"] <= best["accuracy"]["accuracy_delta"]
+
+
+def test_best_row_breaks_ties_on_compression_ratio(result) -> None:
+    best = result.best_row()
+    assert best is not None
+    # Among equally accurate rows the widest compression must win.
+    same_delta = [
+        row for row in result.rows
+        if row.accuracy["accuracy_delta"] == best["accuracy"]["accuracy_delta"]
+    ]
+    assert best["compression_ratio"] == max(row.compression_ratio for row in same_delta)
+
+
+def test_churn_outliers_only_lists_rows_above_the_threshold(result) -> None:
+    for item in result.churn_outliers(threshold=0.0):
+        assert item["flip_rate"] > 0.0
+        assert item["ratio"] > 5.0
+
+
+def test_build_report_has_the_documented_schema(config: SweepConfig, result) -> None:
+    report = build_report(config, result)
+    assert set(report) == {
+        "meta",
+        "config",
+        "dataset",
+        "training",
+        "calibration",
+        "reference_accuracy",
+        "rows",
+        "delta_table",
+        "format_aggregates",
+        "sensitivity",
+        "cumulative_sensitivity",
+        "mixed_precision",
+        "parameter_share",
+        "summary",
+    }
+    assert report["meta"]["schema_version"] == REPORT_SCHEMA_VERSION
+    assert report["meta"]["tool"] == "quantbench"
+
+
+def test_build_report_is_strict_json_serialisable(config: SweepConfig, result) -> None:
+    report = build_report(config, result)
+    # allow_nan=False is the point: the report must not contain NaN literals.
+    text = json.dumps(report, allow_nan=False)
+    assert "NaN" not in text
+    assert "Infinity" not in text
+
+
+def test_write_and_reload_a_report(config: SweepConfig, result, tmp_path: Path) -> None:
+    from dataclasses import replace
+
+    local = replace(config, output_dir=str(tmp_path / "reports"), report_name="out.json")
+    path = write_report(local, result)
+    assert path.exists()
+    reloaded = load_report(path)
+    assert reloaded["reference_accuracy"] == pytest.approx(round(result.reference_accuracy, 6))
+    assert len(reloaded["rows"]) == len(result.rows)
+
+
+def test_report_writer_creates_missing_directories(config: SweepConfig, result, tmp_path: Path) -> None:
+    writer = ReportWriter(output_dir=tmp_path / "a" / "b" / "c", filename="r.json")
+    path = writer.write(build_report(config, result))
+    assert path.exists()
+    assert path.parent.is_dir()
+
+
+def test_load_report_rejects_a_missing_file(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError, match="report not found"):
+        load_report(tmp_path / "nope.json")
+
+
+def test_load_report_rejects_a_file_without_rows(tmp_path: Path) -> None:
+    path = tmp_path / "bad.json"
+    path.write_text(json.dumps({"meta": {}}), encoding="utf-8")
+    with pytest.raises(ValueError, match="missing the 'rows' key"):
+        load_report(path)
