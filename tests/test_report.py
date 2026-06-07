@@ -176,3 +176,138 @@ def test_load_report_rejects_a_file_without_rows(tmp_path: Path) -> None:
     path.write_text(json.dumps({"meta": {}}), encoding="utf-8")
     with pytest.raises(ValueError, match="missing the 'rows' key"):
         load_report(path)
+
+
+def test_load_report_rejects_a_non_mapping_root(tmp_path: Path) -> None:
+    path = tmp_path / "list.json"
+    path.write_text("[1, 2, 3]", encoding="utf-8")
+    with pytest.raises(ValueError, match="report root must be a mapping"):
+        load_report(path)
+
+
+def test_summarise_report_mentions_the_headline_numbers(config: SweepConfig, result) -> None:
+    text = summarise_report(build_report(config, result))
+    assert "reference accuracy" in text
+    assert "configurations: 3" in text
+    assert "fp32" in text
+
+
+def test_compare_reports_of_identical_runs_is_all_zero(config: SweepConfig, result) -> None:
+    report = build_report(config, result)
+    diff = compare_reports(report, report)
+    assert diff["n_shared_configs"] == len(result.rows)
+    assert diff["only_in_baseline"] == []
+    assert diff["only_in_candidate"] == []
+    assert diff["reference_accuracy_diff"] == pytest.approx(0.0)
+    for row in diff["rows"]:
+        assert row["accuracy_delta_diff"] == pytest.approx(0.0)
+        assert row["flip_rate_diff"] == pytest.approx(0.0)
+
+
+def test_compare_reports_detects_a_missing_configuration(config: SweepConfig, result) -> None:
+    full = build_report(config, result)
+    trimmed = json.loads(json.dumps(full))
+    trimmed["rows"] = trimmed["rows"][1:]
+    diff = compare_reports(full, trimmed)
+    assert diff["n_shared_configs"] == len(full["rows"]) - 1
+    assert diff["only_in_baseline"] == [full["rows"][0]["label"]]
+
+
+def test_export_csv_writes_a_header_and_one_line_per_row(
+    config: SweepConfig, result, tmp_path: Path
+) -> None:
+    report = build_report(config, result)
+    path = export_csv(report, tmp_path / "rows.csv")
+    lines = path.read_text(encoding="utf-8").strip().splitlines()
+    assert len(lines) == len(result.rows) + 1
+    assert lines[0].startswith("label,format,scheme")
+    assert "fp32" in lines[1]
+
+
+def test_cli_parser_exposes_every_subcommand() -> None:
+    parser = build_parser()
+    args = parser.parse_args(["sweep", "--config", "config.yaml", "--csv", "out.csv"])
+    assert args.command == "sweep"
+    assert args.config == "config.yaml"
+    assert args.csv == "out.csv"
+    assert parser.parse_args(["inspect", "--format", "int4"]).granularity == "per_channel"
+    assert parser.parse_args(["compare", "a.json", "b.json"]).baseline == "a.json"
+    assert parser.parse_args(["calibrate"]).command == "calibrate"
+
+
+def test_cli_without_a_command_prints_help(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main([]) == 2
+    assert "usage" in capsys.readouterr().out.lower()
+
+
+def test_cli_version_flag_prints_the_version(capsys: pytest.CaptureFixture[str]) -> None:
+    assert main(["--version"]) == 0
+    assert "quantbench" in capsys.readouterr().out
+
+
+def test_cli_sweep_writes_a_report(config: SweepConfig, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        f"""
+formats: [fp32, int8]
+schemes: [symmetric]
+granularities: [per_tensor]
+include_sensitivity: false
+output_dir: {tmp_path / 'reports'}
+report_name: cli.json
+model:
+  hidden_sizes: [8]
+  epochs: 2
+  batch_size: 32
+data:
+  n_samples: 60
+  n_features: 4
+  n_classes: 2
+  n_informative: 3
+calibration:
+  method: minmax
+  n_bins: 64
+  n_calibration_samples: 16
+""",
+        encoding="utf-8",
+    )
+    code = main(["sweep", "--config", str(config_path), "--quiet"])
+    assert code == 0
+    assert (tmp_path / "reports" / "cli.json").exists()
+
+
+def test_cli_sweep_with_a_missing_config_returns_one(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    code = main(["sweep", "--config", str(tmp_path / "absent.yaml")])
+    assert code == 1
+    assert "error:" in capsys.readouterr().err
+
+
+def test_cli_inspect_emits_json(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+model:
+  hidden_sizes: [8]
+  epochs: 2
+data:
+  n_samples: 60
+  n_features: 4
+  n_classes: 2
+  n_informative: 3
+""",
+        encoding="utf-8",
+    )
+    code = main(["inspect", "--config", str(config_path), "--format", "int8", "--json"])
+    assert code == 0
+    payload = json.loads(capsys.readouterr().out)
+    assert payload["format"] == "int8"
+    assert "behaviour" in payload
+    assert payload["behaviour"]["churn"]["flip_rate"] >= 0.0
+
+
+def test_cli_inspect_rejects_an_unknown_format(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text("model:\n  epochs: 1\n", encoding="utf-8")
+    code = main(["inspect", "--config", str(config_path), "--format", "int3"])
+    assert code == 1
+    assert "unknown numeric format" in capsys.readouterr().err
