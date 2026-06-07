@@ -348,3 +348,5 @@ if __name__ == '__main__':
 # Fix memory leak in benchmark runner [2026-05-28T18:20:59]
 
 # Vectorize dequantization kernel for speed [2026-06-02T09:39:42]
+
+# Add support for 3-bit quantization [2026-06-07T10:31:46]
