@@ -195,3 +195,4 @@
 [2026-06-01T13:55:24] Add support for 3-bit quantization
 [2026-06-02T09:39:42] Vectorize dequantization kernel for speed
 [2026-06-03T16:16:34] Update README with benchmarking results
+[2026-06-07T20:56:43] Validate models on Wikitext dataset
