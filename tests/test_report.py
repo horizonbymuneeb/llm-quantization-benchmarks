@@ -311,3 +311,40 @@ def test_cli_inspect_rejects_an_unknown_format(tmp_path: Path, capsys: pytest.Ca
     code = main(["inspect", "--config", str(config_path), "--format", "int3"])
     assert code == 1
     assert "unknown numeric format" in capsys.readouterr().err
+
+
+def test_cli_compare_prints_the_shared_count(config: SweepConfig, result, tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    path = write_report(
+        SweepConfig(output_dir=str(tmp_path), report_name="r.json"), result
+    )
+    code = main(["compare", str(path), str(path)])
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "shared configurations:" in out
+
+
+def test_cli_calibrate_prints_each_activation_site(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    config_path = tmp_path / "config.yaml"
+    config_path.write_text(
+        """
+model:
+  hidden_sizes: [8]
+  epochs: 2
+data:
+  n_samples: 60
+  n_features: 4
+  n_classes: 2
+  n_informative: 3
+calibration:
+  method: percentile
+  percentile: 99.0
+  n_bins: 128
+  n_calibration_samples: 16
+""",
+        encoding="utf-8",
+    )
+    code = main(["calibrate", "--config", str(config_path)])
+    assert code == 0
+    out = capsys.readouterr().out
+    assert "method=percentile" in out
+    assert "hidden_0" in out
