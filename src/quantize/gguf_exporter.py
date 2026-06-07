@@ -350,3 +350,5 @@ if __name__ == '__main__':
 # Vectorize dequantization kernel for speed [2026-06-02T09:39:42]
 
 # Add support for 3-bit quantization [2026-06-07T10:31:46]
+
+# Implement GPTQ quantization alternative [2026-06-07T19:10:50]
