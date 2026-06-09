@@ -352,3 +352,5 @@ if __name__ == '__main__':
 # Add support for 3-bit quantization [2026-06-07T10:31:46]
 
 # Implement GPTQ quantization alternative [2026-06-07T19:10:50]
+
+# Update benchmarking suite with new metrics [2026-06-09T11:38:47]
