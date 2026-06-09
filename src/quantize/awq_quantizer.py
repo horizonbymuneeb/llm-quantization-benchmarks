@@ -481,3 +481,5 @@ if __name__ == '__main__':
 # Update README with benchmarking results [2026-06-03T16:16:34]
 
 # Validate models on Wikitext dataset [2026-06-07T20:56:43]
+
+# Optimize CUDA graph for repeated inference [2026-06-09T17:45:15]

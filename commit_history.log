@@ -198,3 +198,4 @@
 [2026-06-07T20:56:43] Validate models on Wikitext dataset
 [2026-06-07T10:31:46] Add support for 3-bit quantization
 [2026-06-07T19:10:50] Implement GPTQ quantization alternative
+[2026-06-09T17:45:15] Optimize CUDA graph for repeated inference
