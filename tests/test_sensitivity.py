@@ -142,3 +142,95 @@ def test_rank_layers_orders_by_output_error_descending(trained: tuple) -> None:
     ranked = rank_layers(results)
     errors = [r.output_relative_error for r in ranked]
     assert errors == sorted(errors, reverse=True)
+
+
+def test_rank_layers_can_sort_by_accuracy_drop(trained: tuple) -> None:
+    params, dataset, _ = trained
+    results = single_layer_sensitivity(
+        params, dataset.x_test, dataset.y_test, NumericFormat.INT4
+    )
+    ranked = rank_layers(results, by="accuracy_drop")
+    drops = [r.accuracy_drop for r in ranked]
+    assert drops == sorted(drops, reverse=True)
+
+
+def test_rank_layers_handles_an_empty_list() -> None:
+    assert rank_layers([]) == []
+
+
+def test_cumulative_sensitivity_starts_at_the_baseline(trained: tuple) -> None:
+    params, dataset, _ = trained
+    curve = cumulative_sensitivity(
+        params, dataset.x_test, dataset.y_test, NumericFormat.INT8
+    )
+    assert curve[0]["n_layers_quantised"] == 0
+    assert curve[0]["incremental_drop"] == 0.0
+    assert len(curve) == params.n_layers + 1
+
+
+def test_cumulative_sensitivity_is_monotone_in_layer_count(trained: tuple) -> None:
+    params, dataset, _ = trained
+    curve = cumulative_sensitivity(
+        params, dataset.x_test, dataset.y_test, NumericFormat.INT8
+    )
+    counts = [int(step["n_layers_quantised"]) for step in curve]
+    assert counts == list(range(params.n_layers + 1))
+    # The cumulative drop is the sum of the incremental drops by construction.
+    total = sum(float(step["incremental_drop"]) for step in curve[1:])
+    assert total == pytest.approx(float(curve[-1]["cumulative_drop"]), abs=1e-9)
+
+
+def test_format_sensitivity_orders_errors_by_width(trained: tuple) -> None:
+    params, dataset, _ = trained
+    rows = format_sensitivity(
+        params,
+        dataset.x_test,
+        dataset.y_test,
+        (NumericFormat.FP32, NumericFormat.BF16, NumericFormat.INT8, NumericFormat.INT4),
+    )
+    by_format = {row["format"]: row for row in rows}
+    assert by_format["fp32"]["weight_rmse"] == pytest.approx(0.0)
+    assert by_format["bf16"]["weight_rmse"] < by_format["int8"]["weight_rmse"]
+    assert by_format["int8"]["weight_rmse"] < by_format["int4"]["weight_rmse"]
+
+
+def test_format_sensitivity_rejects_a_bad_index(trained: tuple) -> None:
+    params, dataset, _ = trained
+    with pytest.raises(IndexError, match="out of range"):
+        format_sensitivity(params, dataset.x_test, dataset.y_test, (NumericFormat.INT8,), layer_index=7)
+
+
+def test_parameter_share_accounts_for_biases_in_the_denominator(trained: tuple) -> None:
+    params, _, _ = trained
+    rows = parameter_share(params)
+    n_weights = sum(int(w.size) for w in params.weights)
+    n_biases = sum(int(b.size) for b in params.biases)
+    # Weight shares leave the bias vectors' share unaccounted for.
+    assert sum(float(r["share"]) for r in rows) == pytest.approx(
+        n_weights / (n_weights + n_biases), abs=1e-6
+    )
+    # Shares relative to the weight matrices alone sum to exactly one.
+    assert sum(float(r["share_of_weights"]) for r in rows) == pytest.approx(1.0, abs=1e-6)
+    assert all(r["layer"].startswith("layers.") for r in rows)
+    assert [r["shape"] for r in rows] == [list(w.shape) for w in params.weights]
+
+
+def test_recommend_mixed_precision_selects_the_top_k(trained: tuple) -> None:
+    params, dataset, _ = trained
+    ranked = rank_layers(
+        single_layer_sensitivity(params, dataset.x_test, dataset.y_test, NumericFormat.INT8)
+    )
+    assignment = recommend_mixed_precision(ranked, top_k=1)
+    assert assignment["n_layers_wide"] == 1
+    assert assignment["sensitive_layers"] == [ranked[0].index]
+    assert assignment["sensitive_format"] == "bf16"
+
+
+def test_recommend_mixed_precision_with_zero_top_k_keeps_everything_narrow(trained: tuple) -> None:
+    params, dataset, _ = trained
+    ranked = rank_layers(
+        single_layer_sensitivity(params, dataset.x_test, dataset.y_test, NumericFormat.INT8)
+    )
+    assignment = recommend_mixed_precision(ranked, top_k=0)
+    assert assignment["sensitive_layers"] == []
+    assert assignment["n_layers_wide"] == 0
