@@ -200,3 +200,4 @@
 [2026-06-07T19:10:50] Implement GPTQ quantization alternative
 [2026-06-09T17:45:15] Optimize CUDA graph for repeated inference
 [2026-06-09T11:38:47] Update benchmarking suite with new metrics
+[2026-06-11T11:27:35] Add benchmarking for Mistral models
