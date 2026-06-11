@@ -234,3 +234,79 @@ def test_recommend_mixed_precision_with_zero_top_k_keeps_everything_narrow(train
     assignment = recommend_mixed_precision(ranked, top_k=0)
     assert assignment["sensitive_layers"] == []
     assert assignment["n_layers_wide"] == 0
+
+
+def test_recommend_mixed_precision_rejects_a_negative_top_k(trained: tuple) -> None:
+    params, dataset, _ = trained
+    ranked = rank_layers(
+        single_layer_sensitivity(params, dataset.x_test, dataset.y_test, NumericFormat.INT8)
+    )
+    with pytest.raises(ValueError, match="top_k must be non-negative"):
+        recommend_mixed_precision(ranked, top_k=-1)
+
+
+def test_apply_mixed_precision_uses_the_requested_formats(trained: tuple) -> None:
+    params, _, _ = trained
+    assignment = {
+        "sensitive_layers": [0],
+        "sensitive_format": "bf16",
+        "default_format": "int4",
+        "n_layers_wide": 1,
+    }
+    mixed = apply_mixed_precision(params, assignment)
+    # Layer 0 keeps BF16 precision, so its error must be far smaller than the
+    # INT4 error on layer 1.
+    err0 = float(np.max(np.abs(mixed.weights[0] - params.weights[0])))
+    err1 = float(np.max(np.abs(mixed.weights[1] - params.weights[1])))
+    assert err0 < err1
+
+
+def test_apply_mixed_precision_of_an_all_float_assignment_is_identity(trained: tuple) -> None:
+    params, _, _ = trained
+    assignment = {
+        "sensitive_layers": [],
+        "sensitive_format": "fp32",
+        "default_format": "fp32",
+        "n_layers_wide": 0,
+    }
+    mixed = apply_mixed_precision(params, assignment)
+    for a, b in zip(mixed.weights, params.weights):
+        np.testing.assert_array_equal(a, b)
+
+
+def test_sensitivity_summary_picks_the_extremes(trained: tuple) -> None:
+    params, dataset, _ = trained
+    ranked = rank_layers(
+        single_layer_sensitivity(params, dataset.x_test, dataset.y_test, NumericFormat.INT4)
+    )
+    summary = sensitivity_summary(ranked)
+    assert summary["n_layers"] == params.n_layers
+    assert summary["most_sensitive"]["index"] == ranked[0].index  # type: ignore[index]
+    assert summary["least_sensitive"]["index"] == ranked[-1].index  # type: ignore[index]
+    assert summary["max_drop"] >= summary["mean_drop"] >= summary["min_drop"]
+
+
+def test_sensitivity_summary_of_an_empty_ranking() -> None:
+    summary = sensitivity_summary([])
+    assert summary["n_layers"] == 0
+    assert summary["most_sensitive"] is None
+
+
+def test_layer_sensitivity_as_dict_has_the_report_keys(trained: tuple) -> None:
+    params, dataset, _ = trained
+    result = single_layer_sensitivity(
+        params, dataset.x_test, dataset.y_test, NumericFormat.INT8
+    )[0]
+    payload = result.as_dict()
+    assert set(payload) == {
+        "layer",
+        "index",
+        "format",
+        "accuracy",
+        "accuracy_drop",
+        "output_relative_error",
+        "weight_rmse",
+        "weight_cosine_distance",
+        "n_parameters",
+    }
+    assert payload["layer"] == "layers.0.weight"
